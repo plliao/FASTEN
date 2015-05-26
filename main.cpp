@@ -286,9 +286,9 @@ int main(int argc, char* argv[]) {
     }
   } else {
     if (NodeIdx.EqI("-1")) {
-      rNCascade.SaveMultipleInferred(TStr::Fmt("%s.txt", OutFNm.CStr()));
+      rNCascade.SaveInferred(TStr::Fmt("%s.txt", OutFNm.CStr()));
     } else {
-        rNCascade.SaveMultipleInferred(TStr::Fmt("%s-%s-%s.txt", OutFNm.CStr(), NIdsStr[0].CStr(), NIdsStr[1].CStr()));
+        rNCascade.SaveInferred(TStr::Fmt("%s-%s-%s.txt", OutFNm.CStr(), NIdsStr[0].CStr(), NIdsStr[1].CStr()));
     }
   }
   

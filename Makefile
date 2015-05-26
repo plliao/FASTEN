@@ -15,11 +15,12 @@ HDRDIR = include
 OBJDIR = obj
 SNAPLIBDIRS = $(GLIB) $(SNAP) $(SNAPADV) $(SNAPEXP)
 INCLUDEDIRS = $(HDRDIR) $(SNAPLIBDIRS)
-LINKOBJS = $(SNAP)/Snap.o $(LIBDIR)/cascdynetinf.o -lrt
+LINKOBJS = $(LIBDIR)/Snap.o $(LIBDIR)/cascdynetinf.o $(LIBDIR)/kronecker.o
 
 CC = g++
 INCLUDEFLAGS = $(foreach dir,$(INCLUDEDIRS), -I $(dir))
-CFLAGS = -g -Wall $(INCLUDEFLAGS)
+#CFLAGS = -g -Wall -ffast-math -fopenmp $(INCLUDEFLAGS)
+CFLAGS = -O3 -Wall -ffast-math -fopenmp $(INCLUDEFLAGS)
 
 CTAGS = ctags
 CTAGFLAGS = 
@@ -37,29 +38,35 @@ SNAPSOURCES = $(foreach dir,$(SNAPLIBDIRS),$(wildcard $(addprefix $(dir)/*, $(SR
 SNAPHEADERS = $(foreach dir,$(SNAPLIBDIRS),$(wildcard $(addprefix $(dir)/*, $(HDREXTS))))
 MAINFILE = main.cpp
 
+UTILITYFILES = $(filter-out $(MAINFILE), $(wildcard $(addprefix *, $(SRCEXTS)))) 
+UTILITYPROGRAMS = $(addprefix $(BINDIR)/, $(basename $(UTILITYFILES)))
+
 .PHONY: all ctags clean show 
 
-all: $(PROGRAM) DataMerger
+all: $(PROGRAM) $(UTILITYPROGRAMS) ctags
 
 $(PROGRAM): $(MAINFILE) $(OBJS) $(LINKOBJS)
-	@$(CC) $(CFLAGS) $< $(OBJS) $(LINKOBJS) -o $@
+	@$(CC) $(CFLAGS) $< $(OBJS) $(LINKOBJS) -lrt -o $@
 
 $(OBJDIR)/%.o: $(SRCDIR)/%$(SRCEXTS) $(HDRDIR)/%$(HDREXTS)
-	@$(CC) $(CFLAGS) -c $< $(LINKOBJS) -o $@
+	@$(CC) $(CFLAGS) -c $< $(LINKOBJS) -lrt -o $@
 
-DataMerger: dataMerger.cpp $(OBJS) $(LINKOBJS)
-	@$(CC) $(CFLAGS) $< $(OBJS) $(LINKOBJS) -o $(addprefix $(BINDIR)/,$@)
+$(BINDIR)/%: %$(SRCEXTS) $(OBJS) $(LINKOBJS)
+	@$(CC) $(CFLAGS) $< $(OBJS) $(LINKOBJS) -lrt -o $@
 
-ctags: $(MAINFILE) $(SOURCES) $(HEADERS) $(SNAPSOURCES) $(SNAPHEADERS)
-	@$(CTAGS) $(CTAGFLAGS) $(MAINFILE) $(SOURCES) $(HEADERS) $(SNAPSOURCES) $(SNAPHEADERS)
+ctags: $(MAINFILES) $(MAINFILE) $(SOURCES) $(HEADERS) $(SNAPSOURCES) $(SNAPHEADERS)
+	@$(CTAGS) $(CTAGFLAGS) $(MAINFILES) $(MAINFILE) $(SOURCES) $(HEADERS) $(SNAPSOURCES) $(SNAPHEADERS)
 
 clean: 
 	@$(RM) $(OBJS) $(PROGRAM)
 
 show:
-	@echo 'PROGRAM     :' $(PROGRAM)
-	@echo 'HEADERS     :' $(HEADERS)
-	@echo 'SOURCES     :' $(SOURCES)
-	@echo 'OBJS        :' $(OBJS)
-	@echo 'INCLUDEFLAGS :' $(INCLUDEFLAGS)
+	@echo 'PROGRAM         :' $(PROGRAM)
+	@echo 'MAINFILE        :' $(MAINFILE)
+	@echo 'UTILITY FILES   :' $(UTILITYFILES)
+	@echo 'UTILITY PROGRAMS:' $(UTILITYPROGRAMS)
+	@echo 'HEADERS         :' $(HEADERS)
+	@echo 'SOURCES         :' $(SOURCES)
+	@echo 'OBJS            :' $(OBJS)
+	@echo 'INCLUDEFLAGS    :' $(INCLUDEFLAGS)
 

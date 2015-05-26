@@ -547,6 +547,12 @@ TFlt RNCascade::crossEntropy(const TInt &NId1, const TInt &NId2) const {
 
 bool RNCascade::isRNCategory(const int& RNNId, TCascade& Cascade) {
    if (Cascade.IsNode(RNNId)) {
+      /*for (int i=0;i<RNNIds.Len();i++) {
+         int NId = RNNIds[i];
+         if (NId==RNNId || !Cascade.IsNode(NId)) continue;
+         if (Cascade.GetTm(NId) < Cascade.GetTm(RNNId)) return false;
+      }*/
+
       double RNInfectedTime = Cascade.GetTm(RNNId) - Cascade.GetMinTm();
       double cascadeTimeWindow = Cascade.GetMaxTm() - Cascade.GetMinTm();
       if (RNInfectedTime < cascadeTimeWindow*0.1) return true;
