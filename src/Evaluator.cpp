@@ -15,70 +15,86 @@ void Evaluator::LoadInferredNetwork(TSIn &SIn, TStr &modelName) {
 }
 
 void Evaluator::EvaluatePRC(TFlt minAlpha, TFlt maxAlpha, const TFlt &step, TFlt PRCPointNm) {
-   const TFlt scale = (maxAlpha-minAlpha)/PRCPointNm;
    TFlt groundTruthTimeStep = GetGroundTruthTimeStep(step); 
-   TIntV NIdV; GroundTruth.GetNIdV(NIdV);
-   int nodeSize = NIdV.Len();
 
    for (int i=0;i<InferredNetworks.Len();i++) {
+      TFlt inferredStep = GetInferredTimeStep(step, i);
       PRC.Add(DyPRCPoints());
       DyPRCPoints &dyPRCPoints = PRC[i];
       if (dyPRCPoints.IsKey(step)) continue;
      
       dyPRCPoints.AddDat(step,PRCPoints());
       PRCPoints &prcPoints = dyPRCPoints.GetDat(step);
-      prcPoints.Reserve(PRCPointNm);
 
       printf("Evluating PRC points, model:%s\n",ModelNames[i]());
 
-      for (int j=0;j<PRCPointNm;j++) {
+      TStrFltFltHNEDNet &inferredNetwork = InferredNetworks[i];
+      TFlt nodeSize = (TFlt)GroundTruth.GetNodes();
+      TFlt P = (TFlt)GroundTruth.GetEdges(), N = nodeSize * (nodeSize - 1.0) - P;
+      TFlt PP = (TFlt)inferredNetwork.GetEdges();
+      TFlt TP = 0.0, FP = 0.0, FN = 0.0;
+      THash<TIntPr,TFlt> edgesAlphaVector;
+      THash<TIntPr,bool> edgesTruthTable;
+      prcPoints.Reserve((int)P);
 
-         if (j!=0 && prcPoints.Last().Val1==0.0 && prcPoints.Last().Val2==0.0) break;
+      PRCPoint endPoint; 
+      endPoint.Val1 = 1.0; endPoint.Val2 = P / (P + N);
+      prcPoints.Add(endPoint);
 
-         PRCPoint prcPoint;
-         TFlt threshold = minAlpha + j * scale;
-         int TP = 0, FP = 0, TN = 0, FN = 0;
-
-         TStrFltFltHNEDNet &inferredNetwork = InferredNetworks[i];
-
-         #pragma omp parallel for
-         for (int src=0; src<nodeSize; src++) {
-            int srcTP = 0, srcFP = 0, srcTN = 0, srcFN = 0;
-            for (int dst=0; dst<nodeSize; dst++) {
-               int srcNId = NIdV[src];
-               int dstNId = NIdV[dst];
-               if (srcNId==dstNId) continue;
-               
-               bool inferredEdge = false;
-               bool groundTruthEdge = false;
-            
-               if (GroundTruth.IsEdge(srcNId,dstNId)) groundTruthEdge = true;
-               if (inferredNetwork.IsEdge(srcNId,dstNId) && inferredNetwork.GetEDat(srcNId,dstNId).GetDat(step) >= threshold) inferredEdge = true;
-               else if (0.0 >= threshold) inferredEdge = true;
-
-               if (inferredEdge && groundTruthEdge) srcTP++;
-               else if (inferredEdge && !groundTruthEdge) srcFP++;
-               else if (!inferredEdge && groundTruthEdge) srcFN++;
-               else srcTN++;
-            }
-
-            #pragma omp critical
-            {
-               TP += srcTP;
-               FP += srcFP;
-               FN += srcFN;
-               TN += srcTN;
-            }
+      for (TStrFltFltHNEDNet::TEdgeI EI = inferredNetwork.BegEI(); EI < inferredNetwork.EndEI(); EI++) {
+         TInt srcNId = EI.GetSrcNId(), dstNId = EI.GetDstNId();
+         TIntPr index; index.Val1 = srcNId; index.Val2 = dstNId;
+         
+         edgesAlphaVector.AddDat(index, EI.GetDat().GetDat(inferredStep));
+         if (GroundTruth.IsEdge(srcNId,dstNId)) { 
+            edgesTruthTable.AddDat(index,true);
+            TP++;
          }
+         else {
+            edgesTruthTable.AddDat(index,false);
+            FP++;
+         }
+      }
+      FN = P - TP;
 
-         if ((FN+TP)==0) prcPoint.Val1 = 0.0;
-         else prcPoint.Val1 = double(TP) / double(FN + TP);
-         if ((TP+FP)==0) prcPoint.Val2 = 0.0;
-         else prcPoint.Val2 = double(TP) / double(TP + FP);
-
-         printf("Threshold: %f, Precision: %f, Recall: %f, x,y: %f,%f\n", threshold(), prcPoint.Val2(), prcPoint.Val1(), prcPoint.Val1(), prcPoint.Val2());
+      edgesAlphaVector.SortByDat();
+         
+      if (P!=TP) {
+         TFlt ratio = (N-FP) / (P-TP);
+         for (TFlt x = P - TP - 1; x >= 0.0; x--) {
+            PRCPoint prcPoint;
+            prcPoint.Val1 = (TP+x) / (P);
+            prcPoint.Val2 = (TP+x) / (TP + x + FP + ratio * x);
+            prcPoints.Add(prcPoint);
+         }
+      }
+      else {
+         PRCPoint prcPoint;
+         prcPoint.Val1 = 1.0;
+         prcPoint.Val2 = TP / (TP + FP);
          prcPoints.Add(prcPoint);
       }
+
+      for (THash<TIntPr,TFlt>::TIter AI = edgesAlphaVector.BegI(); !AI.IsEnd(); AI++) {         
+         TIntPr index = AI.GetKey();
+         PRCPoint prcPoint;
+         if (edgesTruthTable.GetDat(index)) {
+            TP--;
+            FN++;
+         }
+         else {
+            FP--;
+         }
+         if (TP==0.0) break;
+         prcPoint.Val1 = TP / P;
+         prcPoint.Val2 = TP / (TP + FP);
+         printf("Threshold: %f, Precision: %f, Recall: %f, x,y: %f,%f\n", AI.GetDat()(), prcPoint.Val2(), prcPoint.Val1(), prcPoint.Val1(), prcPoint.Val2());
+         prcPoints.Add(prcPoint);
+      }
+      
+      endPoint.Val1 = 0.0;
+      endPoint.Val2 = 1.0;
+      prcPoints.Add(endPoint);
    }
 }
 
@@ -109,13 +125,14 @@ void Evaluator::EvaluateMSE(const TFlt &step) {
      TFlt mse = 0.0;
      TFlt mae = 0.0;
      TStrFltFltHNEDNet &inferredNetwork = InferredNetworks[i];
+     TFlt inferredStep = GetInferredTimeStep(step, i);
 
      for (TStrFltFltHNEDNet::TEdgeI EI = inferredNetwork.BegEI();EI!=inferredNetwork.EndEI();EI++) {
         int srcNId = EI.GetSrcNId();
         int dstNId = EI.GetDstNId();
         if (srcNId==dstNId) continue;
         
-        TFlt inferredAlpha = EI.GetDat().GetDat(step);
+        TFlt inferredAlpha = EI.GetDat().GetDat(inferredStep);
         
         if (GroundTruth.IsEdge(srcNId,dstNId)) {
            TFlt groundTruthAlpha = GroundTruth.GetEDat(srcNId,dstNId).GetDat(groundTruthStep);
@@ -221,3 +238,15 @@ TFlt Evaluator::GetGroundTruthTimeStep(TFlt step) const {
    return groundTruthStep;
 }
 
+TFlt Evaluator::GetInferredTimeStep(TFlt step, size_t i) const {
+   TVec<TFlt> steps = GetSteps(i);
+   TFlt InferredTimeStep = steps[0];
+
+   for (int t=1;t<steps.Len();t++) {
+      if (step < steps[t]) {
+         InferredTimeStep = steps[t-1];
+         break;
+      }
+   }
+   return InferredTimeStep;
+}

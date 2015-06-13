@@ -20,6 +20,7 @@ class Evaluator {
 
     TVec<TFlt> GetSteps(size_t i) const;
     TFlt GetGroundTruthTimeStep(TFlt step) const;
+    TFlt GetInferredTimeStep(TFlt step, size_t i) const;
 
   private:
     TStrFltFltHNEDNet GroundTruth;  
