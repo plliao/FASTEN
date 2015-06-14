@@ -252,13 +252,6 @@ void UserPropertyModel::Infer(const TFltV& Steps) {
       Data data = {nodeInfo.NodeNmH, CascH, CascadesIdx, Steps[t]};
       em.Optimize(lossFunction, data);
 
-      const THash<TIntPr,TFlt>& acquaintance     = lossFunction.getParameter().acquaintance;
-      const THash<TIntPr,TFlt>& receiverProperty = lossFunction.getParameter().receiverProperty;
-      const THash<TIntPr,TFlt>& spreaderProperty = lossFunction.getParameter().spreaderProperty;
-      const THash<TIntPr,TFlt>& topicReceive = lossFunction.getParameter().topicReceive;
-      const THash<TIntPr,TFlt>& topicSpread = lossFunction.getParameter().topicSpread;
-      const TFlt multiplier = lossFunction.getParameter().multiplier;
-   
       printf("prior probability:");
       const THash<TInt,TFlt>& kPi = lossFunction.getParameter().kPi;
       for (THash<TInt,TFlt>::TIter piI = kPi.BegI(); !piI.IsEnd(); piI++) printf("topic %d: %f, ", piI.GetKey()(), piI.GetDat()());
@@ -268,48 +261,27 @@ void UserPropertyModel::Infer(const TFltV& Steps) {
       int nodeSize = nodeInfo.NodeNmH.Len();
       for (THash<TInt, TNodeInfo>::TIter SI = nodeInfo.NodeNmH.BegI(); !SI.IsEnd(); SI++) {
          for (THash<TInt, TNodeInfo>::TIter DI = nodeInfo.NodeNmH.BegI(); !DI.IsEnd(); DI++,i++) {
-            if (SI.GetKey()==DI.GetKey()) continue;
-
-            TIntPr srcIndex, dstIndex, acquaintanceIndex;
-            srcIndex.Val1 = SI.GetKey(); dstIndex.Val1 = DI.GetKey();
-            acquaintanceIndex.Val1 = SI.GetKey(); acquaintanceIndex.Val2 = DI.GetKey();
-            TFlt acquaintanceValue = userPropertyFunctionConfigure.acquaintanceInitValue;
-            if (acquaintance.IsKey(acquaintanceIndex)) acquaintanceValue = acquaintance.GetDat(acquaintanceIndex);
-            //if (acquaintanceValue <= edgeInfo.MinAlpha) continue;
-
-            TFlt alpha = 0.0;
-            for (TInt index=0; index < userPropertyFunctionConfigure.propertySize; index++) {
-               srcIndex.Val2 = dstIndex.Val2 = index;
-               TFlt srcValue = userPropertyFunctionConfigure.propertyInitValue, dstValue = userPropertyFunctionConfigure.propertyInitValue;
-               if (spreaderProperty.IsKey(srcIndex)) srcValue = spreaderProperty.GetDat(srcIndex);
-               if (receiverProperty.IsKey(dstIndex)) dstValue = receiverProperty.GetDat(dstIndex);
-               alpha += srcValue * dstValue;
-            }
-            alpha /= (TFlt) userPropertyFunctionConfigure.propertySize;
+            if (SI.GetKey()== DI.GetKey()) continue;
 
             TInt srcNId = SI.GetKey(), dstNId = DI.GetKey();
-            printf("%d,%d: property value:%f, acquaintance value:%f, \n", srcNId(), dstNId(), alpha(), acquaintanceValue());
-            TFlt topicValue = -DBL_MAX; TInt topic = -1;
+            TFlt acquaintanceValue = lossFunction.GetAcquaitance(srcNId, dstNId);
+            TFlt propertyValue = lossFunction.GetPropertyValue(srcNId, dstNId);
+            //if (acquaintanceValue <= edgeInfo.MinAlpha) continue;
+
+            printf("%d,%d: property value:%f, acquaintance value:%f, \n", srcNId(), dstNId(), propertyValue(), acquaintanceValue());
+            TFlt maxTopicValue = -DBL_MAX; TInt topic = -1;
             for (TInt latentVariable = 0; latentVariable < userPropertyFunctionConfigure.topicSize; latentVariable++) {
-               srcIndex.Val2 = dstIndex.Val2 = latentVariable;
-               TFlt srcValue = userPropertyFunctionConfigure.topicInitValue, dstValue = userPropertyFunctionConfigure.topicInitValue;
-               if (topicSpread.IsKey(srcIndex))  srcValue = topicSpread.GetDat(srcIndex);
-               if (topicReceive.IsKey(dstIndex)) dstValue = topicReceive.GetDat(dstIndex);
-               if (srcValue * dstValue > topicValue && kPi.GetDat(latentVariable) > 0.0001) { 
-                  topicValue = srcValue * dstValue;
+               TFlt topicValue = lossFunction.GetTopicValue(srcNId, dstNId,latentVariable);
+               if (topicValue > maxTopicValue && kPi.GetDat(latentVariable) > 0.0001) { 
+                  maxTopicValue = topicValue;
                   topic = latentVariable;
                }
-               printf("\t\ttopic %d alpha:%f, topic spreader value:%f, topic receiver value:%f\n", \
-                      latentVariable(), acquaintanceValue * edgeInfo.MaxAlpha * sigmoid(alpha + srcValue * dstValue),srcValue(),dstValue());
+               printf("\t\ttopic %d, topicValue: %f, alpha:%f\n", latentVariable(), topicValue, lossFunction.GetAlpha(srcNId, dstNId, latentVariable));
             }
             //printf("\n");
 
-            //TInt srcNId = SI.GetKey(), dstNId = DI.GetKey();
             //if (i%100000==0) printf("add edge: %d,%d , edge size: %d, edge index: %d\n", srcNId(), dstNId(), nodeSize*nodeSize,i);
-            TFlt propertyValue = alpha;
-            alpha += topicValue;
-            alpha *= multiplier;
-            alpha = acquaintanceValue * edgeInfo.MaxAlpha * sigmoid(alpha);
+            TFlt alpha = lossFunction.GetAlpha(srcNId, dstNId, topic);
             //printf("%d,%d: alpha:%f, acquaintance value:%f, multiplier:%f, property value:%f, topic:%d, topic value:%f\n",\
                    srcNId(), dstNId(), alpha(), acquaintanceValue(), multiplier(), propertyValue(), topic(), topicValue());
 

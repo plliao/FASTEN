@@ -48,17 +48,17 @@ int main(int argc, char* argv[]) {
   const double MinAlpha = Env.GetIfArgPrefixFlt("-la:", 0.05, "Min alpha (default:0.05)\n");
   const double MaxAlpha = Env.GetIfArgPrefixFlt("-ua:", 100, "Maximum alpha (default:100)\n");
 
-  const double propertyInitValue = Env.GetIfArgPrefixFlt("-ipv:", 0.25, "Initial property value (default:1)\n");
-  const double propertyMinValue = Env.GetIfArgPrefixFlt("-lpv:", 0.01, "Minimum property value (default:0.1)\n");
-  const double propertyMaxValue = Env.GetIfArgPrefixFlt("-upv:", 1.0, "Maximum property value (default:10)\n");
+  const double propertyInitValue = Env.GetIfArgPrefixFlt("-ipv:", 0.0, "Initial property value (default:1)\n");
+  const double propertyMinValue = Env.GetIfArgPrefixFlt("-lpv:", -100.0, "Minimum property value (default:0.1)\n");
+  const double propertyMaxValue = Env.GetIfArgPrefixFlt("-upv:", 100.0, "Maximum property value (default:10)\n");
 
-  const double topicInitValue = Env.GetIfArgPrefixFlt("-itv:", 0.5, "Initial topic value (default:1)\n");
-  const double topicMinValue = Env.GetIfArgPrefixFlt("-ltv:", 0.01, "Minimum topic value (default:0.1)\n");
-  const double topicMaxValue = Env.GetIfArgPrefixFlt("-utv:", 2.0, "Maximum topic value (default:10)\n");
+  const double topicInitValue = Env.GetIfArgPrefixFlt("-itv:", 0.0, "Initial topic value (default:1)\n");
+  const double topicMinValue = Env.GetIfArgPrefixFlt("-ltv:", -100.0, "Minimum topic value (default:0.1)\n");
+  const double topicMaxValue = Env.GetIfArgPrefixFlt("-utv:", 100.0, "Maximum topic value (default:10)\n");
   
-  const double acquaintanceInitValue = Env.GetIfArgPrefixFlt("-iav:", 0.5, "Initial acquaintance value (default:0.01)\n");
+  const double acquaintanceInitValue = Env.GetIfArgPrefixFlt("-iav:", 0.01, "Initial acquaintance value (default:0.01)\n");
   const double acquaintanceMinValue = Env.GetIfArgPrefixFlt("-lav:", 0.01, "Minimum acquaintance value (default:0.0)\n");
-  const double acquaintanceMaxValue = Env.GetIfArgPrefixFlt("-uav:", 1.0, "Maximum acquaintance value (default:100)\n");
+  const double acquaintanceMaxValue = Env.GetIfArgPrefixFlt("-uav:", 50.0, "Maximum acquaintance value (default:100)\n");
 
   const int SaveOnlyEdges = Env.GetIfArgPrefixInt("-oe:", 0, "Save only edges, not nodes\n:0:edges and nodes, 1:only edges (default:0)\n");
 
@@ -93,7 +93,7 @@ int main(int argc, char* argv[]) {
   userProperty.SetTopicMinValue(topicMinValue);
 
   userProperty.SetAcquaintanceInitValue(acquaintanceInitValue);
-  userProperty.SetAcquaintanceMaxValue(acquaintanceMaxValue);
+  userProperty.SetAcquaintanceMaxValue(MaxAlpha);
   userProperty.SetAcquaintanceMinValue(acquaintanceMinValue);
 
   userProperty.SetRegularizer(Regularizer);

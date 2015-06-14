@@ -24,7 +24,15 @@ class UPEM {
             Expectation(LF,data);      
             Maximization(LF,data);
             emIterNm++;
-            printf("UPEM iteration:%d\n",(int)emIterNm);
+
+            THash<TInt,TFlt> kPi = LF.getPriorTHash();
+            printf("UPEM iteration:%d, ",(int)emIterNm);
+            for (int i=0; i<kPi.Len(); i++) {
+               TInt key; TFlt value;
+               kPi.GetKeyDat(i,key,value);
+               printf("topic %d: %f, ", key(), value());
+            }
+            printf("\n");
             fflush(stdout);
          }
       }
@@ -50,16 +58,16 @@ class UPEM {
                jointLikelihoodTable.AddDat(latentVariable, LF.JointLikelihood(datum,latentVariable));
             }
 
-            printf("\nindex:%d",CI.GetKey()());
+            //printf("\nindex:%d",CI.GetKey()());
             THash<TInt,TFlt> &latentDistribution = LF.latentDistributions.GetDat(CI.GetKey());
             for (TInt latentVariable=0; latentVariable < size; latentVariable++) {
                TFlt likelihood = 0.0;
                for (TInt i=0; i < size; i++)
                   likelihood += TMath::Power(TMath::E, jointLikelihoodTable.GetDat(i) - jointLikelihoodTable.GetDat(latentVariable));
                latentDistribution.GetDat(latentVariable) = 1.0/likelihood;
-               printf(", k:%d, p:%f",latentVariable(),latentDistribution.GetDat(latentVariable)());
+               //printf(", k:%d, p:%f",latentVariable(),latentDistribution.GetDat(latentVariable)());
             }
-            printf("\n\n");
+            //printf("\n\n");
          }
       }
       void Maximization(UPEMLikelihoodFunction<parameter> &LF, Data data) {
@@ -95,14 +103,14 @@ class UPEM {
                   Datum datum = {data.NodeNmH, cascH, cascH.GetKey(cascadesIdx.GetKey(index)), time};
                   parameterDiff += LF.gradient1(datum);
                }
-               parameterDiff *= (configure.pGDConfigure.learningRate/double(configure.pGDConfigure.batchSize));
+               parameterDiff *= (0.1 * configure.pGDConfigure.learningRate/double(configure.pGDConfigure.batchSize));
                LF.parameter.projectedlyUpdateGradient(parameterDiff);
                iterNm++;
                //printf("iterNm: %d, loss: %f\n",(int)iterNm,loss());
             }
 
             //maximize spreader
-            iterNm = 0;
+            /*iterNm = 0;
             while(iterNm < configure.pGDConfigure.maxIterNm) { 
                parameter parameterDiff;
                for (size_t i=0;i<configure.pGDConfigure.batchSize;i++) {
@@ -114,7 +122,7 @@ class UPEM {
                LF.parameter.projectedlyUpdateGradient(parameterDiff);
                iterNm++;
                //printf("iterNm: %d, loss: %f\n",(int)iterNm,loss());
-            }
+            }*/
             coorIterNm++;
             printf("COOR iteration:%d\n",(int)coorIterNm);
             fflush(stdout);
@@ -132,6 +140,7 @@ class UPEMLikelihoodFunction : public PGDFunction<parameter> {
       virtual parameter& gradient1(Datum datum) = 0;
       virtual parameter& gradient2(Datum datum) = 0;
       virtual parameter& gradient3(Datum datum) = 0;
+      virtual THash<TInt,TFlt> getPriorTHash() const = 0;
       TFlt loss(Datum datum) const {
          TFlt datumLoss = 0.0;
          for (TInt i=0;i<latentVariableSize;i++) datumLoss += TMath::Power(TMath::E, JointLikelihood(datum,i));
