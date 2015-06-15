@@ -189,10 +189,10 @@ UserPropertyParameter& UserPropertyFunction::gradient1(Datum datum) {
       }
    }
 
-   for (TInt latentVariable=0; latentVariable<latentVariableSize; latentVariable++) {
+   /*for (TInt latentVariable=0; latentVariable<latentVariableSize; latentVariable++) {
       parameterGrad.kPi.AddDat(latentVariable,latentDistributions.GetDat(datum.index).GetDat(latentVariable));
       parameterGrad.kPi_times.AddDat(latentVariable,1.0);
-   }
+   }*/
 
    return parameterGrad;
 }
@@ -340,10 +340,10 @@ UserPropertyParameter& UserPropertyFunction::gradient2(Datum datum) {
       }
    }
 
-   for (TInt latentVariable=0; latentVariable<latentVariableSize; latentVariable++) {
+   /*for (TInt latentVariable=0; latentVariable<latentVariableSize; latentVariable++) {
       parameterGrad.kPi.AddDat(latentVariable, latentDistributions.GetDat(datum.index).GetDat(latentVariable));
       parameterGrad.kPi_times.AddDat(latentVariable,1.0);
-   }
+   }*/
 
    return parameterGrad;
 }
@@ -458,10 +458,10 @@ UserPropertyParameter& UserPropertyFunction::gradient3(Datum datum) {
       }
    }
 
-   /*for (TInt latentVariable=0; latentVariable<latentVariableSize; latentVariable++) {
-      parameterGrad.kPi.GetDat(latentVariable) = latentDistributions.GetDat(datum.index).GetDat(latentVariable);
-      parameterGrad.kPi_times.GetDat(latentVariable)++;
-   }*/
+   for (TInt latentVariable=0; latentVariable<latentVariableSize; latentVariable++) {
+      parameterGrad.kPi.AddDat(latentVariable, latentDistributions.GetDat(datum.index).GetDat(latentVariable));
+      parameterGrad.kPi_times.AddDat(latentVariable, 1.0);
+   }
 
    return parameterGrad;
 }
