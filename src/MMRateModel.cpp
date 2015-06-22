@@ -20,9 +20,18 @@ void MMRateModel::Init() {
    }
 }
 
-void MMRateModel::Infer(const TFltV& Steps) {
-   
-   mMRateFunctionConfigure.configure.shapingFunction = new EXPShapingFunction();
+void MMRateModel::Infer(const TFltV& Steps, const TStr& OutFNm) {
+  
+   switch (nodeInfo.Model) {
+      case POW :
+         mMRateFunctionConfigure.configure.shapingFunction = new POWShapingFunction(Delta);
+         break;
+      case RAY :
+         mMRateFunctionConfigure.configure.shapingFunction = new RAYShapingFunction();
+         break;
+      default :
+         mMRateFunctionConfigure.configure.shapingFunction = new EXPShapingFunction(); 
+   } 
    lossFunction.set(mMRateFunctionConfigure);
    em.set(eMConfigure);
    TIntFltH CascadesIdx;
@@ -51,12 +60,20 @@ void MMRateModel::Infer(const TFltV& Steps) {
       printf("MMRate prior probability\n");
       for (THash<TInt,TFlt>::TIter piI = kPi.BegI(); !piI.IsEnd(); piI++) printf("topic %d probability: %f, ", piI.GetKey()(), piI.GetDat()());
       printf("\n");
+         
 
       for (THash<TInt,AdditiveRiskFunction>::TIter NI = kAlphas.BegI(); !NI.IsEnd(); NI++) {
          TInt key = NI.GetKey();
          const TFlt multiplier = NI.GetDat().getParameter().getMultiplier();
          const THash<TIntPr, TFlt>& alphas = NI.GetDat().getParameter().getAlphas();
          TStrFltFltHNEDNet& inferredNetwork = InferredNetwork;
+
+         TFOut FOut(OutFNm + TStr("_") + key.GetStr() + ".txt");
+
+         for (THash<TInt, TNodeInfo>::TIter NI = nodeInfo.NodeNmH.BegI(); NI < nodeInfo.NodeNmH.EndI(); NI++) {
+            FOut.PutStr(TStr::Fmt("%d,%s\n", NI.GetKey().Val, NI.GetDat().Name.CStr()));
+         }
+         FOut.PutStr("\n");
 
          int i=0;
          for (THash<TIntPr, TFlt>::TIter AI = alphas.BegI(); !AI.IsEnd(); AI++,i++) {
@@ -71,6 +88,8 @@ void MMRateModel::Infer(const TFltV& Steps) {
             if (alpha <= mMRateFunctionConfigure.configure.MinAlpha) continue;
             if (!inferredNetwork.IsEdge(srcNId, dstNId)) inferredNetwork.AddEdge(srcNId, dstNId, TFltFltH());
  
+            FOut.PutStr(TStr::Fmt("%d,%d,%f,%f\n", srcNId, dstNId, Steps[t], alpha));
+
             if (!inferredNetwork.GetEDat(srcNId, dstNId).IsKey(Steps[t])) inferredNetwork.GetEDat(srcNId,dstNId).AddDat(Steps[t]) = alpha;
             else if (InferredNetwork.GetEDat(srcNId, dstNId).GetDat(Steps[t]) < alpha) InferredNetwork.GetEDat(srcNId, dstNId).GetDat(Steps[t]) = alpha;
          }

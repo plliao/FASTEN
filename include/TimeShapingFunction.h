@@ -17,4 +17,20 @@ class EXPShapingFunction : public TimeShapingFunction {
      bool Before(TFlt srcTime,TFlt dstTime) const;
 };
 
+class POWShapingFunction : public TimeShapingFunction {
+   public:
+     POWShapingFunction(TFlt d) : delta(d) {}
+     TFlt Value(TFlt srcTime,TFlt dstTime) const;
+     TFlt Integral(TFlt srcTime,TFlt dstTime) const;
+     bool Before(TFlt srcTime,TFlt dstTime) const;
+
+     TFlt delta;
+};
+
+class RAYShapingFunction : public TimeShapingFunction {
+   public:
+     TFlt Value(TFlt srcTime,TFlt dstTime) const;
+     TFlt Integral(TFlt srcTime,TFlt dstTime) const;
+     bool Before(TFlt srcTime,TFlt dstTime) const;
+};
 #endif

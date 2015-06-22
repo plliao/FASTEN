@@ -14,7 +14,7 @@ class Info {
       THash<TInt, TCascade> CascH;
       TStrFltFltHNEDNet Network, InferredNetwork;
      
-      TFlt Window, TotalTime; 
+      TFlt Window, TotalTime, Delta; 
       TFlt Gamma, Mu, Aging;
       TRegularizer Regularizer;
 
@@ -30,6 +30,7 @@ class Info {
 
       void SetModel(const TModel& model) { nodeInfo.Model = model; }
       void SetWindow(const double& window) { Window = window; }
+      void SetDelta(const double& delta) { Delta = delta; }
 
       void SetLearningRate(const double& lr) { pGDConfigure.learningRate = lr; }
       void SetBatchSize(const size_t batchSize) { pGDConfigure.batchSize = batchSize;}

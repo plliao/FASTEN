@@ -49,15 +49,16 @@ int main(int argc, char* argv[]) {
   const double MaxAlpha = Env.GetIfArgPrefixFlt("-ua:", 100, "Maximum alpha (default:100)\n");
 
   const double propertyInitValue = Env.GetIfArgPrefixFlt("-ipv:", 0.0, "Initial property value (default:1)\n");
-  const double propertyMinValue = Env.GetIfArgPrefixFlt("-lpv:", -100.0, "Minimum property value (default:0.1)\n");
-  const double propertyMaxValue = Env.GetIfArgPrefixFlt("-upv:", 100.0, "Maximum property value (default:10)\n");
+  const double propertyMinValue = Env.GetIfArgPrefixFlt("-lpv:", -5.0, "Minimum property value (default:0.1)\n");
+  const double propertyMaxValue = Env.GetIfArgPrefixFlt("-upv:", 5.0, "Maximum property value (default:10)\n");
 
   const double topicInitValue = Env.GetIfArgPrefixFlt("-itv:", 0.0, "Initial topic value (default:1)\n");
+  const double topicStdValue = Env.GetIfArgPrefixFlt("-stv:", 1.0, "Initial topic value std (default:1.0)\n");
   const double topicMinValue = Env.GetIfArgPrefixFlt("-ltv:", -100.0, "Minimum topic value (default:0.1)\n");
   const double topicMaxValue = Env.GetIfArgPrefixFlt("-utv:", 100.0, "Maximum topic value (default:10)\n");
   
   const double acquaintanceInitValue = Env.GetIfArgPrefixFlt("-iav:", 0.01, "Initial acquaintance value (default:0.01)\n");
-  const double acquaintanceMinValue = Env.GetIfArgPrefixFlt("-lav:", 0.01, "Minimum acquaintance value (default:0.0)\n");
+  const double acquaintanceMinValue = Env.GetIfArgPrefixFlt("-lav:", 0.0005, "Minimum acquaintance value (default:0.0)\n");
   const double acquaintanceMaxValue = Env.GetIfArgPrefixFlt("-uav:", 50.0, "Maximum acquaintance value (default:100)\n");
 
   const int SaveOnlyEdges = Env.GetIfArgPrefixInt("-oe:", 0, "Save only edges, not nodes\n:0:edges and nodes, 1:only edges (default:0)\n");
@@ -89,6 +90,7 @@ int main(int argc, char* argv[]) {
   userProperty.SetPropertyMinValue(propertyMinValue);
 
   userProperty.SetTopicInitValue(topicInitValue);
+  userProperty.SetTopicStdValue(topicStdValue);
   userProperty.SetTopicMaxValue(topicMaxValue);
   userProperty.SetTopicMinValue(topicMinValue);
 
@@ -215,7 +217,7 @@ int main(int argc, char* argv[]) {
   for (int i=0; i<Steps.Len(); i++) { FOutTimeSteps.PutStr(TStr::Fmt("%f\n", Steps[i].Val)); }
 
   userProperty.Init();
-  userProperty.Infer(Steps);
+  userProperty.Infer(Steps, OutFNm);
   userProperty.SaveInferred(TStr::Fmt("%s.txt", OutFNm.CStr()));
   
   Catch

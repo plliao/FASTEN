@@ -6,7 +6,7 @@ void Evaluator::LoadGroundTruth(TSIn &SIn) {
    InfoPathFileIO::LoadNetworkTxt(SIn, GroundTruth, nodeInfo);
 }
 
-void Evaluator::LoadInferredNetwork(TSIn &SIn, TStr &modelName) {
+void Evaluator::LoadInferredNetwork(TSIn &SIn, TStr modelName) {
    NodeInfo nodeInfo;
    InferredNetworks.Add(TStrFltFltHNEDNet());
    ModelNames.Add(modelName);
@@ -14,7 +14,7 @@ void Evaluator::LoadInferredNetwork(TSIn &SIn, TStr &modelName) {
    InfoPathFileIO::LoadNetworkTxt(SIn, inferredNetwork, nodeInfo);
 }
 
-void Evaluator::EvaluatePRC(TFlt minAlpha, TFlt maxAlpha, const TFlt &step, TFlt PRCPointNm) {
+void Evaluator::EvaluatePRC(TFlt minAlpha, TFlt maxAlpha, const TFlt &step, TFlt PRCPointNm, bool verbol) {
    TFlt groundTruthTimeStep = GetGroundTruthTimeStep(step); 
 
    for (int i=0;i<InferredNetworks.Len();i++) {
@@ -26,7 +26,7 @@ void Evaluator::EvaluatePRC(TFlt minAlpha, TFlt maxAlpha, const TFlt &step, TFlt
       dyPRCPoints.AddDat(step,PRCPoints());
       PRCPoints &prcPoints = dyPRCPoints.GetDat(step);
 
-      printf("Evluating PRC points, model:%s\n",ModelNames[i]());
+      if (verbol) printf("Evluating PRC points, model:%s\n",ModelNames[i]());
 
       TStrFltFltHNEDNet &inferredNetwork = InferredNetworks[i];
       TFlt nodeSize = (TFlt)GroundTruth.GetNodes();
@@ -88,7 +88,7 @@ void Evaluator::EvaluatePRC(TFlt minAlpha, TFlt maxAlpha, const TFlt &step, TFlt
          if (TP==0.0) break;
          prcPoint.Val1 = TP / P;
          prcPoint.Val2 = TP / (TP + FP);
-         printf("Threshold: %f, Precision: %f, Recall: %f, x,y: %f,%f\n", AI.GetDat()(), prcPoint.Val2(), prcPoint.Val1(), prcPoint.Val1(), prcPoint.Val2());
+         if (verbol) printf("Threshold: %f, Precision: %f, Recall: %f, x,y: %f,%f\n", AI.GetDat()(), prcPoint.Val2(), prcPoint.Val1(), prcPoint.Val1(), prcPoint.Val2());
          prcPoints.Add(prcPoint);
       }
       
@@ -112,6 +112,8 @@ void Evaluator::EvaluateAUC(const TFlt &step) {
          TFlt delta = TFlt::Abs(prcPoints[j].Val2 - prcPoints[j+1].Val2);
          sum += scale * ( hight + delta / 2);
       }
+      PRC_AUC.Add(TFltFltH());
+      PRC_AUC[i].AddDat(step,sum);
       printf("%s AUC: %f\n", ModelNames[i].CStr(), sum());
    }
 }

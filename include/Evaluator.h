@@ -11,8 +11,8 @@ class Evaluator {
   public:
     
     void LoadGroundTruth(TSIn &SIn);
-    void LoadInferredNetwork(TSIn &SIn, TStr &modelName);
-    void EvaluatePRC(TFlt minAlpha, TFlt maxAlpha, const TFlt &step, TFlt PRCPointNm=100.0);
+    void LoadInferredNetwork(TSIn &SIn, TStr modelName);
+    void EvaluatePRC(TFlt minAlpha, TFlt maxAlpha, const TFlt &step, TFlt PRCPointNm=100.0, bool verbol=true);
     void EvaluateAUC(const TFlt &step);
     void EvaluateMSE(const TFlt &step);
     void PlotPRC(const TStr &Str) const;
@@ -22,12 +22,12 @@ class Evaluator {
     TFlt GetGroundTruthTimeStep(TFlt step) const;
     TFlt GetInferredTimeStep(TFlt step, size_t i) const;
 
-  private:
+  public:
     TStrFltFltHNEDNet GroundTruth;  
     TVec<TStrFltFltHNEDNet> InferredNetworks;
     TVec<TStr> ModelNames;
     TVec<DyPRCPoints> PRC; 
-    TVec<TFltFltH> MSE, MAE;
+    TVec<TFltFltH> MSE, MAE, PRC_AUC;
 
 };
 

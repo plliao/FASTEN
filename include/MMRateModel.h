@@ -14,9 +14,8 @@ class MMRateModel {
       THash<TInt, TCascade> CascH;
       TStrFltFltHNEDNet Network, InferredNetwork; 
      
-      TFlt Window, TotalTime; 
-      TFlt Gamma, Mu, Aging;
-      TRegularizer Regularizer;
+      TFlt Window, TotalTime, Delta; 
+      TFlt Gamma, Aging;
 
       MMRateFunctionConfigure mMRateFunctionConfigure;
       MMRateFunction lossFunction;
@@ -31,6 +30,7 @@ class MMRateModel {
       void SetLatentVariableSize(const TInt size) { mMRateFunctionConfigure.latentVariableSize = eMConfigure.latentVariableSize = size;}
       void SetModel(const TModel& model) { nodeInfo.Model = model; }
       void SetWindow(const double& window) { Window = window; }
+      void SetDelta(const double& delta) { Delta = delta; }
 
       void SetLearningRate(const double& lr) { eMConfigure.pGDConfigure.learningRate = lr; }
       void SetBatchSize(const size_t batchSize) { eMConfigure.pGDConfigure.batchSize = batchSize;}
@@ -40,8 +40,8 @@ class MMRateModel {
       void SetEMMaxIterNm(const size_t maxIterNm) { eMConfigure.maxIterNm = maxIterNm;}
 
       void SetAging(const double& aging) { Aging = aging; }
-      void SetRegularizer(const TRegularizer& reg) { Regularizer = reg; }
-      void SetMu(const double& mu) { Mu = mu; }
+      void SetRegularizer(const TRegularizer& reg) { mMRateFunctionConfigure.configure.Regularizer = reg; }
+      void SetMu(const double& mu) { mMRateFunctionConfigure.configure.Mu = mu; }
       void SetTolerance(const double& tol) { mMRateFunctionConfigure.configure.Tol = tol; }
       void SetMaxAlpha(const double& ma) { mMRateFunctionConfigure.configure.MaxAlpha = edgeInfo.MaxAlpha = ma; }
       void SetMinAlpha(const double& ma) { mMRateFunctionConfigure.configure.MinAlpha = edgeInfo.MinAlpha = ma; }
@@ -49,7 +49,7 @@ class MMRateModel {
 
       void Init();
       int GetCascs() { return CascH.Len(); }
-      void Infer(const TFltV&);
+      void Infer(const TFltV&, const TStr& OutFNm);
 };
 
 #endif

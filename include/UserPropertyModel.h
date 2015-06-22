@@ -16,8 +16,7 @@ class UserPropertyModel {
      
       TFlt Window, TotalTime; 
       TFlt Delta, K;
-      TFlt Gamma, Mu, Aging;
-      TRegularizer Regularizer;
+      TFlt Gamma, Aging;
 
       UserPropertyFunctionConfigure userPropertyFunctionConfigure;
       UserPropertyFunction lossFunction;
@@ -32,7 +31,7 @@ class UserPropertyModel {
       void GenParameters() { lossFunction.GenParameters(Network,userPropertyFunctionConfigure);}
       void GenCascade(TCascade& c);
       void GenerateGroundTruth(const int& TNetwork, const int& NNodes, const int& NEdges, const TStr& NetworkParams);
-      void SaveGroundTruth();
+      void SaveGroundTruth(TStr);
 
       void SetLatentVariableSize(const TInt size) { userPropertyFunctionConfigure.topicSize = eMConfigure.latentVariableSize = size;}
       void SetPropertySize(const TInt size) { userPropertyFunctionConfigure.propertySize = size;}
@@ -51,8 +50,8 @@ class UserPropertyModel {
       void SetCOMaxIterNm(const size_t maxIterNm) { eMConfigure.maxCoorIterNm = maxIterNm;}
 
       void SetAging(const double& aging) { Aging = aging; }
-      void SetRegularizer(const TRegularizer& reg) { Regularizer = reg; }
-      void SetMu(const double& mu) { Mu = mu; }
+      void SetRegularizer(const TRegularizer& reg) { userPropertyFunctionConfigure.Regularizer = reg; }
+      void SetMu(const double& mu) { userPropertyFunctionConfigure.Mu = mu; }
       
       void SetAcquaintanceMinValue(const double& mv) { userPropertyFunctionConfigure.acquaintanceMinValue = mv; }
       void SetAcquaintanceMaxValue(const double& mv) { userPropertyFunctionConfigure.acquaintanceMaxValue = mv; }
@@ -65,13 +64,14 @@ class UserPropertyModel {
       void SetTopicMinValue(const double& mv) { userPropertyFunctionConfigure.topicMinValue = mv; }
       void SetTopicMaxValue(const double& mv) { userPropertyFunctionConfigure.topicMaxValue = mv; }
       void SetTopicInitValue(const double& iv) { userPropertyFunctionConfigure.topicInitValue = iv; }
+      void SetTopicStdValue(const double& sv) { userPropertyFunctionConfigure.topicStdValue = sv; }
 
       void SetMaxAlpha(const double& ma) {userPropertyFunctionConfigure.MaxAlpha = edgeInfo.MaxAlpha = ma;} 
       void SetMinAlpha(const double& ma) {userPropertyFunctionConfigure.MinAlpha = edgeInfo.MinAlpha = ma;} 
 
       void Init();
       int GetCascs() { return CascH.Len(); }
-      void Infer(const TFltV&);
+      void Infer(const TFltV&, const TStr& OutFNm);
 };
 
 #endif

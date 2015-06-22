@@ -54,6 +54,7 @@ int main(int argc, char* argv[]) {
   printf("\nLoading input cascades: %s\n", InFNm.CStr());
 
   info.SetModel(Model);
+  info.SetDelta(Delta);
   info.SetSampling(TSam);
   info.SetMaxIterNm(Iters);
   info.SetBatchSize(BatchLen);

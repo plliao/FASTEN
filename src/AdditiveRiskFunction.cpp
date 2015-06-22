@@ -66,7 +66,7 @@ AdditiveRiskParameter& AdditiveRiskFunction::gradient(Datum datum) {
             val = shapingFunction->Integral(srcTime,dstTime) - shapingFunction->Value(srcTime,dstTime)/sumInLog;
          else
             val = shapingFunction->Integral(srcTime,dstTime);
-
+            
          int index = i*cascadeSize + j;
          srcNIds[index] = srcNId();
          dstNIds[index] = dstNId();
@@ -169,10 +169,12 @@ AdditiveRiskParameter& AdditiveRiskParameter::operator *= (const TFlt multiplier
 AdditiveRiskParameter& AdditiveRiskParameter::projectedlyUpdateGradient(const AdditiveRiskParameter& p) {
    for (THash<TIntPr,TFlt>::TIter AI = p.alphas.BegI(); !AI.IsEnd(); AI++) {
       TIntPr key = AI.GetKey();
-      TFlt alpha = AI.GetDat() * p.multiplier;
+      TFlt alphaGradient = AI.GetDat() * p.multiplier, alpha;
       //printf("%d,%d: %f, dat:%f, m:%f\n",key.Val1(),key.Val2(),alpha(),AI.GetDat()(),p.multiplier());
-      if (alphas.IsKey(key)) alpha = alphas.GetDat(key) * multiplier - alpha;
-      else alpha = InitAlpha - alpha;
+      if (alphas.IsKey(key)) alpha = alphas.GetDat(key) * multiplier; 
+      else alpha = InitAlpha;
+
+      alpha -= (alphaGradient + (Regularizer ? Mu : TFlt(0.0)) * alpha);
 
       if (alpha < Tol) alpha = Tol;
       if (alpha > MaxAlpha) alpha = MaxAlpha;
@@ -190,6 +192,8 @@ void AdditiveRiskParameter::reset() {
 }
 
 void AdditiveRiskParameter::set(AdditiveRiskFunctionConfigure configure) {
+   Regularizer = configure.Regularizer;
+   Mu = configure.Mu;
    Tol = configure.Tol;
    InitAlpha = configure.InitAlpha;
    MaxAlpha = configure.MaxAlpha;

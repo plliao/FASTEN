@@ -103,7 +103,7 @@ class UPEM {
                   Datum datum = {data.NodeNmH, cascH, cascH.GetKey(cascadesIdx.GetKey(index)), time};
                   parameterDiff += LF.gradient1(datum);
                }
-               parameterDiff *= (0.1 * configure.pGDConfigure.learningRate/double(configure.pGDConfigure.batchSize));
+               parameterDiff *= (configure.pGDConfigure.learningRate/double(configure.pGDConfigure.batchSize));
                LF.parameter.projectedlyUpdateGradient(parameterDiff);
                iterNm++;
                //printf("iterNm: %d, loss: %f\n",(int)iterNm,loss());
@@ -118,7 +118,7 @@ class UPEM {
                   Datum datum = {data.NodeNmH, cascH, cascH.GetKey(cascadesIdx.GetKey(index)), time};
                   parameterDiff += LF.gradient2(datum);
                }
-               parameterDiff *= (configure.pGDConfigure.learningRate/double(configure.pGDConfigure.batchSize));
+               parameterDiff *= (0.1 * configure.pGDConfigure.learningRate/double(configure.pGDConfigure.batchSize));
                LF.parameter.projectedlyUpdateGradient(parameterDiff);
                iterNm++;
                //printf("iterNm: %d, loss: %f\n",(int)iterNm,loss());

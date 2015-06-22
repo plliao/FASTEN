@@ -57,6 +57,7 @@ int main(int argc, char* argv[]) {
   printf("\nLoading input cascades: %s\n", InFNm.CStr());
 
   mMRate.SetModel(Model);
+  mMRate.SetDelta(Delta);
   mMRate.SetSampling(TSam);
   mMRate.SetMaxIterNm(Iters);
   mMRate.SetEMMaxIterNm(EMIters);
@@ -188,7 +189,7 @@ int main(int argc, char* argv[]) {
   for (int i=0; i<Steps.Len(); i++) { FOutTimeSteps.PutStr(TStr::Fmt("%f\n", Steps[i].Val)); }
 
   mMRate.Init();
-  mMRate.Infer(Steps);
+  mMRate.Infer(Steps, OutFNm);
   mMRate.SaveInferred(TStr::Fmt("%s.txt", OutFNm.CStr()));
   
   Catch

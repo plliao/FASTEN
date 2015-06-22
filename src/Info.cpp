@@ -22,7 +22,16 @@ void Info::Init() {
 
 void Info::Infer(const TFltV& Steps) {
    
-   additiveRiskFunctionConfigure.shapingFunction = new EXPShapingFunction();
+   switch (nodeInfo.Model) {
+      case POW :
+         additiveRiskFunctionConfigure.shapingFunction = new POWShapingFunction(Delta);
+         break;
+      case RAY :
+         additiveRiskFunctionConfigure.shapingFunction = new RAYShapingFunction();
+         break;
+      default :
+         additiveRiskFunctionConfigure.shapingFunction = new EXPShapingFunction(); 
+   } 
    lossFunction.set(additiveRiskFunctionConfigure);
    pgd.set(pGDConfigure);
    

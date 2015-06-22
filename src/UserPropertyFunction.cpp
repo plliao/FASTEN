@@ -73,6 +73,7 @@ UserPropertyParameter& UserPropertyFunction::gradient1(Datum datum) {
    parameterGrad.reset();
    
    int nodeSize = NodeNmH.Len();
+   TInt cascadeSize = Cascade.Len();
 
    #pragma omp parallel for
    for (int i=0;i<nodeSize;i++) {
@@ -114,6 +115,7 @@ UserPropertyParameter& UserPropertyFunction::gradient1(Datum datum) {
       }
 
       THash<TIntPr,TFlt> receiverPropertyGrad(propertySize());
+      THash<TIntPr,TFlt> spreaderPropertyGrad(cascadeSize * propertySize());
       THash<TIntPr,TFlt> topicReceiveGrad(latentVariableSize());
 
       for (THash<TInt, THitInfo>::TIter CascadeNI = Cascade.BegI(); CascadeNI < Cascade.EndI(); CascadeNI++) {
@@ -129,7 +131,9 @@ UserPropertyParameter& UserPropertyFunction::gradient1(Datum datum) {
          for (TInt propertyIndex=0; propertyIndex<propertySize; propertyIndex++) {
             spreaderIndex.Val2 = receiverIndex.Val2 = propertyIndex;
             TFlt spreaderValue = parameter.propertyInitValue;
+            TFlt receiverValue = parameter.propertyInitValue;
             if (parameter.spreaderProperty.IsKey(spreaderIndex)) spreaderValue = parameter.spreaderProperty.GetDat(spreaderIndex);
+            if (parameter.receiverProperty.IsKey(receiverIndex)) receiverValue = parameter.receiverProperty.GetDat(receiverIndex);
 
             for (TInt latentVariable=0; latentVariable<latentVariableSize; latentVariable++) {
                TIntPr propertyValueIndex; propertyValueIndex.Val1 = srcNId; propertyValueIndex.Val2 = latentVariable;
@@ -142,11 +146,14 @@ UserPropertyParameter& UserPropertyFunction::gradient1(Datum datum) {
                   grad = shapingFunction->Integral(srcTime,dstTime) - shapingFunction->Value(srcTime,dstTime)/totalAlpha;
                }
                else grad = shapingFunction->Integral(srcTime,dstTime);
-               grad *= acquaintedValue * propertyValue * spreaderValue * latentDistributions.GetDat(datum.index).GetDat(latentVariable)/ (TFlt)propertySize;
+               grad *= acquaintedValue * propertyValue * latentDistributions.GetDat(datum.index).GetDat(latentVariable)/ (TFlt)propertySize;
             
-               if (!receiverPropertyGrad.IsKey(receiverIndex)) receiverPropertyGrad.AddDat(receiverIndex,grad);
-               else receiverPropertyGrad.GetDat(receiverIndex) += grad;
+               if (!receiverPropertyGrad.IsKey(receiverIndex)) receiverPropertyGrad.AddDat(receiverIndex,grad * spreaderValue);
+               else receiverPropertyGrad.GetDat(receiverIndex) += grad * spreaderValue;
+               if (!spreaderPropertyGrad.IsKey(spreaderIndex)) spreaderPropertyGrad.AddDat(spreaderIndex,grad * receiverValue);
+               else spreaderPropertyGrad.GetDat(spreaderIndex) += grad * receiverValue;
             }
+            //printf("index:%d, %d,%d: index:%d, sValue:%f, rValue:%f, shapingVal:%f\n",datum.index(),srcNId(),dstNId(),propertyIndex(),sValue(),rValue(),shapingFunction->Integral(srcTime,dstTime)()); 
             //printf("index:%d, %d,%d: index:%d, sValue:%f, rValue:%f, shapingVal:%f\n",datum.index(),srcNId(),dstNId(),propertyIndex(),sValue(),rValue(),shapingFunction->Integral(srcTime,dstTime)()); 
          }
          
@@ -154,7 +161,9 @@ UserPropertyParameter& UserPropertyFunction::gradient1(Datum datum) {
          for (TInt latentVariable=0; latentVariable<latentVariableSize; latentVariable++) {
             spreaderIndex.Val2 = receiverIndex.Val2 = latentVariable;
             TFlt spreaderValue = parameter.topicInitValue;
+            TFlt receiverValue = parameter.topicInitValue;
             if (parameter.topicSpread.IsKey(spreaderIndex)) spreaderValue = parameter.topicSpread.GetDat(spreaderIndex);
+            if (parameter.topicReceive.IsKey(receiverIndex)) receiverValue = parameter.topicReceive.GetDat(receiverIndex);
                
             TIntPr propertyValueIndex; propertyValueIndex.Val1 = srcNId; propertyValueIndex.Val2 = latentVariable;
             TFlt propertyValue = sigmoid(propertyValueVector.GetDat(propertyValueIndex));
@@ -181,6 +190,11 @@ UserPropertyParameter& UserPropertyFunction::gradient1(Datum datum) {
             else parameterGrad.receiverProperty.GetDat(I.GetKey()) += I.GetDat();
             //printf("%d,%d receiver property grad:%f\n",I.GetKey().Val1(),I.GetKey().Val2(),I.GetDat()());
          } 
+         for (THash<TIntPr,TFlt>::TIter I = spreaderPropertyGrad.BegI(); !I.IsEnd(); I++) {
+            if (!parameterGrad.spreaderProperty.IsKey(I.GetKey())) parameterGrad.spreaderProperty.AddDat(I.GetKey(),I.GetDat());
+            else parameterGrad.spreaderProperty.GetDat(I.GetKey()) += I.GetDat();
+            //printf("%d,%d spreader property grad:%f\n",I.GetKey().Val1(),I.GetKey().Val2(),I.GetDat()());
+         } 
          for (THash<TIntPr,TFlt>::TIter I = topicReceiveGrad.BegI(); !I.IsEnd(); I++) {
             if (!parameterGrad.topicReceive.IsKey(I.GetKey())) parameterGrad.topicReceive.AddDat(I.GetKey(),I.GetDat());
             else parameterGrad.topicReceive.GetDat(I.GetKey()) += I.GetDat();
@@ -188,11 +202,6 @@ UserPropertyParameter& UserPropertyFunction::gradient1(Datum datum) {
          } 
       }
    }
-
-   /*for (TInt latentVariable=0; latentVariable<latentVariableSize; latentVariable++) {
-      parameterGrad.kPi.AddDat(latentVariable,latentDistributions.GetDat(datum.index).GetDat(latentVariable));
-      parameterGrad.kPi_times.AddDat(latentVariable,1.0);
-   }*/
 
    return parameterGrad;
 }
@@ -213,7 +222,6 @@ UserPropertyParameter& UserPropertyFunction::gradient2(Datum datum) {
       TInt dstNId = key, srcNId;
       TFlt dstTime, srcTime;
 
-      TIntPr acquaintanceIndex; acquaintanceIndex.Val2 = dstNId;
       TIntPr receiverIndex, spreaderIndex;
       
       bool inCascade = false;
@@ -231,32 +239,16 @@ UserPropertyParameter& UserPropertyFunction::gradient2(Datum datum) {
 
          if (!shapingFunction->Before(srcTime,dstTime)) break; 
          
-         acquaintanceIndex.Val1 = srcNId;
-         TFlt acquaintedValue = parameter.acquaintanceInitValue;               
-         if (parameter.acquaintance.IsKey(acquaintanceIndex)) acquaintedValue = parameter.acquaintance.GetDat(acquaintanceIndex);
-            
-         TFlt alpha = 0.0;
-         receiverIndex.Val1 = dstNId; spreaderIndex.Val1 = srcNId;
-         for (TInt propertyIndex=0; propertyIndex<propertySize; propertyIndex++) {
-            receiverIndex.Val2 = spreaderIndex.Val2 = propertyIndex;
-            TFlt spreaderValue = parameter.propertyInitValue, receiverValue = parameter.propertyInitValue;
-            if (parameter.spreaderProperty.IsKey(spreaderIndex)) spreaderValue = parameter.spreaderProperty.GetDat(spreaderIndex);
-            if (parameter.receiverProperty.IsKey(receiverIndex)) receiverValue = parameter.receiverProperty.GetDat(receiverIndex);
-            alpha += spreaderValue * receiverValue;
-         }
-         alpha /= (TFlt)propertySize;         
+         TFlt acquaintedValue = GetAcquaitance(srcNId, dstNId);             
+         TFlt propertyValue = GetPropertyValue(srcNId, dstNId);
 
          for (TInt latentVariable=0; latentVariable<latentVariableSize; latentVariable++) {
-            receiverIndex.Val2 = spreaderIndex.Val2 = latentVariable; 
-            TFlt spreaderValue = parameter.topicInitValue, receiverValue = parameter.topicInitValue;
-            if (parameter.topicSpread.IsKey(spreaderIndex)) spreaderValue = parameter.topicSpread.GetDat(spreaderIndex);
-            if (parameter.topicReceive.IsKey(receiverIndex)) receiverValue = parameter.topicReceive.GetDat(receiverIndex);
-
+            TFlt topicValue = GetTopicValue(srcNId, dstNId, latentVariable);
             TIntPr propertyValueIndex; propertyValueIndex.Val1 = srcNId; propertyValueIndex.Val2 = latentVariable;
-            propertyValueVector.AddDat(propertyValueIndex, alpha + spreaderValue * receiverValue);
+            propertyValueVector.AddDat(propertyValueIndex, propertyValue + topicValue);
 
             if (inCascade) {
-               TFlt hazard = acquaintedValue * MaxAlpha * sigmoid(propertyValueVector.GetDat(propertyValueIndex)) * shapingFunction->Value(srcTime,dstTime);
+               TFlt hazard = acquaintedValue * sigmoid(propertyValueVector.GetDat(propertyValueIndex)) * shapingFunction->Value(srcTime,dstTime);
                if (!dstAlphaVector.IsKey(latentVariable)) dstAlphaVector.AddDat(latentVariable,hazard);
                else dstAlphaVector.GetDat(latentVariable) += hazard;
             }
@@ -264,7 +256,7 @@ UserPropertyParameter& UserPropertyFunction::gradient2(Datum datum) {
       }
       
       THash<TIntPr,TFlt> spreaderPropertyGrad(cascadeSize * propertySize());
-      THash<TIntPr,TFlt> topicSpreadGrad(cascadeSize * latentVariableSize());
+      //THash<TIntPr,TFlt> topicSpreadGrad(cascadeSize * latentVariableSize());
 
       for (THash<TInt, THitInfo>::TIter CascadeNI = Cascade.BegI(); CascadeNI < Cascade.EndI(); CascadeNI++) {
          srcNId = CascadeNI.GetKey();
@@ -272,10 +264,7 @@ UserPropertyParameter& UserPropertyFunction::gradient2(Datum datum) {
 
          if (!shapingFunction->Before(srcTime,dstTime)) break; 
          
-         acquaintanceIndex.Val1 = srcNId;
-
-         TFlt acquaintedValue = parameter.acquaintanceInitValue;               
-         if (parameter.acquaintance.IsKey(acquaintanceIndex)) acquaintedValue = parameter.acquaintance.GetDat(acquaintanceIndex);
+         TFlt acquaintedValue = GetAcquaitance(srcNId, dstNId);             
                         
          spreaderIndex.Val1 = srcNId; receiverIndex.Val1 = dstNId;
          for (TInt propertyIndex=0; propertyIndex<propertySize; propertyIndex++) {
@@ -286,7 +275,7 @@ UserPropertyParameter& UserPropertyFunction::gradient2(Datum datum) {
             for (TInt latentVariable=0; latentVariable<latentVariableSize; latentVariable++) {
                TIntPr propertyValueIndex; propertyValueIndex.Val1 = srcNId; propertyValueIndex.Val2 = latentVariable;
                TFlt propertyValue = sigmoid(propertyValueVector.GetDat(propertyValueIndex));
-               propertyValue = MaxAlpha * propertyValue * (1.0 - propertyValue);
+               propertyValue = propertyValue * (1.0 - propertyValue);
                
                TFlt grad;
                if (inCascade) {
@@ -303,7 +292,7 @@ UserPropertyParameter& UserPropertyFunction::gradient2(Datum datum) {
             //printf("index:%d, %d,%d: index:%d, sValue:%f, rValue:%f, shapingVal:%f\n",datum.index(),srcNId(),dstNId(),propertyIndex(),sValue(),rValue(),shapingFunction->Integral(srcTime,dstTime)()); 
          }
          
-         spreaderIndex.Val1 = srcNId; receiverIndex.Val1 = dstNId;
+         /*spreaderIndex.Val1 = srcNId; receiverIndex.Val1 = dstNId;
          for (TInt latentVariable=0; latentVariable<latentVariableSize; latentVariable++) {
             spreaderIndex.Val2 = receiverIndex.Val2 = latentVariable;
             TFlt receiverValue = parameter.topicInitValue;
@@ -323,7 +312,7 @@ UserPropertyParameter& UserPropertyFunction::gradient2(Datum datum) {
             
             if (!topicSpreadGrad.IsKey(spreaderIndex)) topicSpreadGrad.AddDat(spreaderIndex,grad);
             else topicSpreadGrad.GetDat(spreaderIndex) += grad;
-         }
+         }*/
       }
       //critical      
       #pragma omp critical
@@ -333,17 +322,12 @@ UserPropertyParameter& UserPropertyFunction::gradient2(Datum datum) {
             else parameterGrad.spreaderProperty.GetDat(I.GetKey()) += I.GetDat();
             //printf("%d,%d spreader property grad:%f\n",I.GetKey().Val1(),I.GetKey().Val2(),I.GetDat()());
          } 
-         for (THash<TIntPr,TFlt>::TIter I = topicSpreadGrad.BegI(); !I.IsEnd(); I++) {
+         /*for (THash<TIntPr,TFlt>::TIter I = topicSpreadGrad.BegI(); !I.IsEnd(); I++) {
             if (!parameterGrad.topicSpread.IsKey(I.GetKey())) parameterGrad.topicSpread.AddDat(I.GetKey(),I.GetDat());
             else parameterGrad.topicSpread.GetDat(I.GetKey()) += I.GetDat();
-         }
+         }*/
       }
    }
-
-   /*for (TInt latentVariable=0; latentVariable<latentVariableSize; latentVariable++) {
-      parameterGrad.kPi.AddDat(latentVariable, latentDistributions.GetDat(datum.index).GetDat(latentVariable));
-      parameterGrad.kPi_times.AddDat(latentVariable,1.0);
-   }*/
 
    return parameterGrad;
 }
@@ -543,10 +527,15 @@ UserPropertyParameter& UserPropertyParameter::operator *= (const TFlt multiplier
 void UserPropertyParameter::UpdateTHash(THash<TIntPr,TFlt>& dst, const THash<TIntPr,TFlt>& src, TFlt minValue, TFlt initValue, TFlt maxValue, TStr comment) {
    for (THash<TIntPr,TFlt>::TIter PI = src.BegI(); !PI.IsEnd(); PI++) {
       TIntPr key = PI.GetKey();
-      TFlt value = PI.GetDat();
+      TFlt valueGradient = PI.GetDat(), value;
       //printf("%s %d,%d: %f, dat:%f, m:%f\n", comment(), key.Val1(), key.Val2(), value(), PI.GetDat()(),m());
-      if (dst.IsKey(key)) value = dst.GetDat(key) - value;
-      else value = initValue - value;
+      if (dst.IsKey(key)) value = dst.GetDat(key);
+      else value = initValue;
+
+      if (comment != TStr("acquaintance"))
+         value -= (valueGradient + (Regularizer ? Mu : TFlt(0.0)) * value);
+      else
+         value -= valueGradient;
 
       if (value < minValue) value = minValue;
       if (value > maxValue) value = maxValue;
@@ -559,8 +548,8 @@ void UserPropertyParameter::UpdateTHash(THash<TIntPr,TFlt>& dst, const THash<TIn
 
 UserPropertyParameter& UserPropertyParameter::projectedlyUpdateGradient(const UserPropertyParameter& p) {
    UpdateTHash(acquaintance, p.acquaintance, acquaintanceMinValue, acquaintanceInitValue, acquaintanceMaxValue, "acquaintance");
-   //UpdateTHash(receiverProperty, p.receiverProperty, propertyMinValue, propertyInitValue, propertyMaxValue, "receiver property");
-   //UpdateTHash(spreaderProperty, p.spreaderProperty, propertyMinValue, propertyInitValue, propertyMaxValue, "spreader property");
+   UpdateTHash(receiverProperty, p.receiverProperty, propertyMinValue, propertyInitValue, propertyMaxValue, "receiver property");
+   UpdateTHash(spreaderProperty, p.spreaderProperty, propertyMinValue, propertyInitValue, propertyMaxValue, "spreader property");
    UpdateTHash(topicReceive, p.topicReceive, topicMinValue, topicInitValue, topicMaxValue, "topic receiver");
    //UpdateTHash(topicSpread, p.topicSpread, topicMinValue, topicInitValue, topicMaxValue, "topic spreader");
    for(THash<TInt,TFlt>::TIter PI = p.kPi.BegI(); !PI.IsEnd(); PI++) {
@@ -595,6 +584,7 @@ void UserPropertyParameter::set(UserPropertyFunctionConfigure configure) {
    propertyMinValue = configure.propertyMinValue;
    
    topicInitValue = configure.topicInitValue;
+   topicStdValue = configure.topicStdValue;
    topicMaxValue = configure.topicMaxValue;
    topicMinValue = configure.topicMinValue;
    
@@ -605,6 +595,9 @@ void UserPropertyParameter::set(UserPropertyFunctionConfigure configure) {
    MaxAlpha = configure.MaxAlpha;
    MinAlpha = configure.MinAlpha;
    propertySize = configure.propertySize;
+   
+   Regularizer = configure.Regularizer;
+   Mu = configure.Mu; 
  
    TRnd rnd; rnd.PutSeed(time(NULL));
    for (TInt i=0;i<configure.topicSize;i++) {
@@ -624,10 +617,10 @@ void UserPropertyParameter::init(Data data, UserPropertyFunctionConfigure config
         TIntPr i; i.Val1 = NI.GetKey(); i.Val2 = index;
         //receiverProperty.AddDat(i,-1.0 * configure.propertyMaxValue() + rnd.GetUniDev() * 2.0 * configure.propertyMaxValue());
         //spreaderProperty.AddDat(i,configure.propertyMinValue() + rnd.GetUniDev() * (configure.propertyMaxValue()-configure.propertyMinValue()));
-        spreaderProperty.AddDat(i,0.0);
-        receiverProperty.AddDat(i,configure.propertyInitValue());
-        //spreaderProperty.AddDat(i,rnd.GetNrmDev(configure.propertyInitValue(), 0.001, configure.propertyMinValue(), configure.propertyMaxValue()));
-        //receiverProperty.AddDat(i,rnd.GetNrmDev(configure.propertyInitValue(), 0.001, configure.propertyMinValue(), configure.propertyMaxValue()));
+        //spreaderProperty.AddDat(i,configure.propertyInitValue());
+        //receiverProperty.AddDat(i,configure.propertyInitValue());
+        spreaderProperty.AddDat(i,rnd.GetNrmDev(configure.propertyInitValue(), 2.0, configure.propertyMinValue(), configure.propertyMaxValue()));
+        receiverProperty.AddDat(i,rnd.GetNrmDev(configure.propertyInitValue(), 2.0, configure.propertyMinValue(), configure.propertyMaxValue()));
         //receiverProperty.AddDat(i,rnd.GetNrmDev(0.0, 1.0, -1.0 * configure.propertyMaxValue(), configure.propertyMaxValue()));
         //printf("%d,%d receiverProperty:%f, spreaderProperty:%f\n",i.Val1(),i.Val2(),receiverProperty.GetDat(i)(),spreaderProperty.GetDat(i)());
      }
@@ -637,7 +630,7 @@ void UserPropertyParameter::init(Data data, UserPropertyFunctionConfigure config
         //topicReceive.AddDat(i,-1.0 * configure.propertyMaxValue() + rnd.GetUniDev() * 2.0 * configure.propertyMaxValue());
         //topicSpread.AddDat(i,configure.topicMinValue() + rnd.GetUniDev() * (configure.topicMaxValue()-configure.topicMinValue()));
         topicSpread.AddDat(i,1.0);
-        topicReceive.AddDat(i,configure.topicInitValue());
+        topicReceive.AddDat(i,rnd.GetNrmDev(configure.topicInitValue(), configure.topicStdValue(), configure.topicMinValue(), configure.topicMaxValue()));
         //topicSpread.AddDat(i,rnd.GetNrmDev(configure.topicInitValue(), 0.001, configure.topicMinValue(), configure.topicMaxValue()));
         //topicReceive.AddDat(i,rnd.GetNrmDev(configure.topicInitValue(), 0.001, configure.topicMinValue(), configure.topicMaxValue()));
         //topicReceive.AddDat(i,rnd.GetNrmDev(0.0, 1.0, -1.0 * configure.topicMaxValue(), configure.topicMaxValue()));
@@ -654,16 +647,14 @@ void UserPropertyParameter::GenParameters(TStrFltFltHNEDNet& network, UserProper
 
       for (TInt index=0; index<configure.propertySize; index++) {
          i.Val2 = index;
-         //receiverProperty.AddDat(i,-1.0 * configure.propertyMaxValue() + rnd.GetUniDev() * 2.0 * configure.propertyMaxValue());
-         spreaderProperty.AddDat(i,configure.propertyMinValue() + rnd.GetUniDev() * (configure.propertyMaxValue()-configure.propertyMinValue()));
-         receiverProperty.AddDat(i,rnd.GetNrmDev(0.0, 0.1, -1.0 * configure.propertyMaxValue(), configure.propertyMaxValue()));
+         spreaderProperty.AddDat(i,rnd.GetNrmDev(configure.propertyInitValue(), 2.0, configure.propertyMinValue(), configure.propertyMaxValue()));
+         receiverProperty.AddDat(i,rnd.GetNrmDev(configure.propertyInitValue(), 2.0, configure.propertyMinValue(), configure.propertyMaxValue()));
       }
      
       for (TInt topic=0; topic<configure.topicSize; topic++) {
          i.Val2 = topic;
-         //topicReceive.AddDat(i,-1.0 * configure.propertyMaxValue() + rnd.GetUniDev() * 2.0 * configure.propertyMaxValue());
-         topicSpread.AddDat(i,configure.topicMinValue() + rnd.GetUniDev() * (configure.topicMaxValue()-configure.topicMinValue()));
-         topicReceive.AddDat(i,rnd.GetNrmDev(0.0, 0.1, -1.0 * configure.topicMaxValue(), configure.topicMaxValue()));
+         topicSpread.AddDat(i,1.0);
+         topicReceive.AddDat(i,rnd.GetNrmDev(configure.topicInitValue(), configure.topicStdValue(), configure.topicMinValue(), configure.topicMaxValue()));
       }
    }
 

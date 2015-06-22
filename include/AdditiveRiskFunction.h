@@ -8,6 +8,8 @@
 typedef struct {
    TFlt Tol, InitAlpha, MaxAlpha, MinAlpha;
    TimeShapingFunction *shapingFunction;
+   TRegularizer Regularizer;
+   TFlt Mu;
 }AdditiveRiskFunctionConfigure;
 
 class AdditiveRiskFunction;
@@ -27,6 +29,8 @@ class AdditiveRiskParameter {
    private:
       TFlt Tol, InitAlpha, MaxAlpha, MinAlpha;
       TFlt multiplier;
+      TRegularizer Regularizer;
+      TFlt Mu;
       THash<TIntPr,TFlt> alphas; 
 };
 

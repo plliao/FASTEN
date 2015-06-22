@@ -38,7 +38,7 @@ int main(int argc, char* argv[]) {
 
   TVec<TFlt> steps1 = evaluator.GetSteps(0);
 
-  evaluator.EvaluatePRC(MinAlpha, MaxAlpha, steps1.Last(),PRCPointNm);
+  evaluator.EvaluatePRC(MinAlpha, MaxAlpha, steps1.Last(),PRCPointNm,false);
   evaluator.EvaluateAUC(steps1.Last());
   evaluator.EvaluateMSE(steps1.Last());
   evaluator.PlotPRC(OutFNm);

@@ -7,11 +7,13 @@
 
 typedef struct {
    TFlt propertyMinValue, propertyInitValue, propertyMaxValue;
-   TFlt topicMinValue, topicInitValue, topicMaxValue;
+   TFlt topicMinValue, topicInitValue, topicMaxValue, topicStdValue;
    TFlt acquaintanceMinValue, acquaintanceInitValue, acquaintanceMaxValue;
    TFlt MaxAlpha, MinAlpha;
    TInt topicSize, propertySize;
    TimeShapingFunction *shapingFunction;
+   TRegularizer Regularizer;
+   TFlt Mu;
 }UserPropertyFunctionConfigure;
 
 class UserPropertyFunction;
@@ -38,10 +40,12 @@ class UserPropertyParameter {
       TFlt GetTopicValue(TInt srcNId, TInt dstNId, TInt topic) const; 
 
       TFlt propertyMinValue, propertyInitValue, propertyMaxValue;
-      TFlt topicMinValue, topicInitValue, topicMaxValue;
+      TFlt topicMinValue, topicInitValue, topicMaxValue, topicStdValue;
       TFlt acquaintanceMinValue, acquaintanceInitValue, acquaintanceMaxValue;
       TFlt MaxAlpha, MinAlpha;
       TInt propertySize;
+      TRegularizer Regularizer;
+      TFlt Mu;
       THash<TIntPr,TFlt> acquaintance;
       THash<TIntPr,TFlt> receiverProperty, spreaderProperty;
       THash<TIntPr,TFlt> topicReceive, topicSpread; 

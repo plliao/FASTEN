@@ -26,25 +26,25 @@ int main(int argc, char* argv[]) {
 
   // tx model, alphas and betas
   const TModel Model = (TModel)Env.GetIfArgPrefixInt("-m:", 0, "Transmission model\n0:exponential, 1:power law, 2:rayleigh, 3:weibull (default:0)\n"); // tx model
-  const TStr RAlphas = Env.GetIfArgPrefixStr("-ar:", TStr("0.01;1"),
- 		  	  	  	  	  	  	  	  	  	 "Minimum and maximum alpha value (default:0.01;1)\n"); // alpha range
+  const TStr RAlphas = Env.GetIfArgPrefixStr("-ar:", TStr("0.01;1"), "Minimum and maximum alpha value (default:0.01;1)\n"); // alpha range
   const double k = Env.GetIfArgPrefixFlt("-k:", 1.0, "Shape parameter k for Weibull distribution (-m:3)\n"); // k for weibull
   const double Delta = Env.GetIfArgPrefixFlt("-d:", 1.0, "Delta for power-law (default:1)\n"); // delta for power law
   
-  const int latentVariableSize  = Env.GetIfArgPrefixInt("-K:", 10, "Latent variable size");
-  const int propertySize  = Env.GetIfArgPrefixInt("-p:", 20, "Latent variable size");
+  const int latentVariableSize  = Env.GetIfArgPrefixInt("-K:", 3, "Latent variable size");
+  const int propertySize  = Env.GetIfArgPrefixInt("-p:", 10, "Latent variable size");
   
-  const double propertyInitValue = Env.GetIfArgPrefixFlt("-ipv:", 0.25, "Initial property value (default:1)\n");
-  const double propertyMinValue = Env.GetIfArgPrefixFlt("-lpv:", 0.01, "Minimum property value (default:0.1)\n");
-  const double propertyMaxValue = Env.GetIfArgPrefixFlt("-upv:", 1.0, "Maximum property value (default:10)\n");
+  const double propertyInitValue = Env.GetIfArgPrefixFlt("-ipv:", 0.0, "Initial property value (default:1)\n");
+  const double propertyMinValue = Env.GetIfArgPrefixFlt("-lpv:", -100.0, "Minimum property value (default:0.1)\n");
+  const double propertyMaxValue = Env.GetIfArgPrefixFlt("-upv:", 100.0, "Maximum property value (default:10)\n");
 
-  const double topicInitValue = Env.GetIfArgPrefixFlt("-itv:", 0.5, "Initial topic value (default:1)\n");
-  const double topicMinValue = Env.GetIfArgPrefixFlt("-ltv:", 0.01, "Minimum topic value (default:0.1)\n");
-  const double topicMaxValue = Env.GetIfArgPrefixFlt("-utv:", 2.0, "Maximum topic value (default:10)\n");
+  const double topicInitValue = Env.GetIfArgPrefixFlt("-itv:", 0.0, "Initial topic value (default:1)\n");
+  const double topicStdValue = Env.GetIfArgPrefixFlt("-stv:", 1.0, "Initial topic value (default:1.0)\n");
+  const double topicMinValue = Env.GetIfArgPrefixFlt("-ltv:", -100.0, "Minimum topic value (default:0.1)\n");
+  const double topicMaxValue = Env.GetIfArgPrefixFlt("-utv:", 100.0, "Maximum topic value (default:10)\n");
   
-  const double acquaintanceInitValue = Env.GetIfArgPrefixFlt("-iav:", 0.5, "Initial acquaintance value (default:0.01)\n");
-  const double acquaintanceMinValue = Env.GetIfArgPrefixFlt("-lav:", 0.01, "Minimum acquaintance value (default:0.0)\n");
-  const double acquaintanceMaxValue = Env.GetIfArgPrefixFlt("-uav:", 1.0, "Maximum acquaintance value (default:100)\n");
+  const double acquaintanceInitValue = Env.GetIfArgPrefixFlt("-iav:", 0.01, "Initial acquaintance value (default:0.01)\n");
+  const double acquaintanceMinValue = Env.GetIfArgPrefixFlt("-lav:", 0.0005, "Minimum acquaintance value (default:0.0)\n");
+  const double acquaintanceMaxValue = Env.GetIfArgPrefixFlt("-uav:", 50.0, "Maximum acquaintance value (default:100)\n");
 
   // num cascades, horizon per cascade & maximum time
   const int NCascades = Env.GetIfArgPrefixInt("-c:", 1000, "Number of cascades (default:1000)\n");
@@ -76,11 +76,12 @@ int main(int argc, char* argv[]) {
   userProperty.SetPropertyMinValue(propertyMinValue);
 
   userProperty.SetTopicInitValue(topicInitValue);
+  userProperty.SetTopicStdValue(topicStdValue);
   userProperty.SetTopicMaxValue(topicMaxValue);
   userProperty.SetTopicMinValue(topicMinValue);
 
   userProperty.SetAcquaintanceInitValue(acquaintanceInitValue);
-  userProperty.SetAcquaintanceMaxValue(acquaintanceMaxValue);
+  userProperty.SetAcquaintanceMaxValue(MaxAlpha);
   userProperty.SetAcquaintanceMinValue(acquaintanceMinValue);
 
   // Generate network
@@ -106,7 +107,7 @@ int main(int argc, char* argv[]) {
 
   printf("Generate %d cascades!\n", userProperty.GetCascs());
 
-  if (TNetwork<2) userProperty.SaveGroundTruth();
+  if (TNetwork<2) userProperty.SaveGroundTruth(FileName);
   InfoPathFileIO::SaveNetwork(TStr::Fmt("%s-network.txt", FileName.CStr()), userProperty.Network, userProperty.nodeInfo, userProperty.edgeInfo);
   // Save Cascades
   InfoPathFileIO::SaveCascades(TStr::Fmt("%s-cascades.txt", FileName.CStr()), userProperty.CascH, userProperty.nodeInfo);
