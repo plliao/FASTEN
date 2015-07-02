@@ -1,6 +1,9 @@
 #include <UserPropertyModel.h>
 #include <kronecker.h>
 #include <InfoPathFileIO.h>
+#include <cmath>
+#include <iostream>
+using namespace std;
 
 void UserPropertyModel::LoadCascadesTxt(const TStr& InFNm) {
    TFIn FIn(InFNm);
@@ -250,6 +253,7 @@ void UserPropertyModel::Infer(const TFltV& Steps, const TStr& OutFNm) {
    em.set(eMConfigure);
    TIntFltH CascadesIdx;
    Data data = {nodeInfo.NodeNmH, CascH, CascadesIdx, 0.0};
+   ExtractFeature();
    lossFunction.InitLatentVariable(data, eMConfigure);
    lossFunction.initParameter(data, userPropertyFunctionConfigure);
    
@@ -293,7 +297,7 @@ void UserPropertyModel::Infer(const TFltV& Steps, const TStr& OutFNm) {
             TFlt propertyValue = lossFunction.GetPropertyValue(srcNId, dstNId);
             //if (acquaintanceValue <= edgeInfo.MinAlpha) continue;
 
-            printf("%d,%d: property value:%f, acquaintance value:%f, \n", srcNId(), dstNId(), propertyValue(), acquaintanceValue());
+            //printf("%d,%d: property value:%f, acquaintance value:%f, \n", srcNId(), dstNId(), propertyValue(), acquaintanceValue());
             TFlt maxTopicValue = -DBL_MAX; TInt topic = -1;
             for (TInt latentVariable = 0; latentVariable < userPropertyFunctionConfigure.topicSize; latentVariable++) {
                TFlt topicValue = lossFunction.GetTopicValue(srcNId, dstNId,latentVariable);
@@ -302,7 +306,7 @@ void UserPropertyModel::Infer(const TFltV& Steps, const TStr& OutFNm) {
                   maxTopicValue = topicValue;
                   topic = latentVariable;
                }
-               printf("\t\ttopic %d, topicValue: %f, alpha:%f\n", latentVariable(), topicValue, alpha);
+               //printf("\t\ttopic %d, topicValue: %f, alpha:%f\n", latentVariable(), topicValue, alpha);
                if (alpha > edgeInfo.MinAlpha ) {
                   if (alpha > edgeInfo.MaxAlpha) alpha = edgeInfo.MaxAlpha;
                   TFOut FOut(OutFNm + TStr("_") + latentVariable.GetStr() + ".txt", true);
@@ -330,3 +334,122 @@ void UserPropertyModel::Infer(const TFltV& Steps, const TStr& OutFNm) {
    }
    delete userPropertyFunctionConfigure.shapingFunction;
 }
+
+fmat UserPropertyModel::sigmoid(fmat& z) {
+   int row = z.n_rows, col = z.n_cols;
+   fmat s = zeros<fmat>(row,col);
+   for (int i=0;i<row;i++) 
+      for (int j=0;j<col;j++)
+         s(i,j) = 1.0 / (1.0 + exp(-1.0 * z(i,j)));
+   return s;
+}
+
+void UserPropertyModel::ExtractFeature() {
+   int CascLen = CascH.Len();
+   int hiddenSize = userPropertyFunctionConfigure.propertySize;
+   int inputSize = nodeInfo.NodeNmH.Len(); 
+   int outputSize = nodeInfo.NodeNmH.Len(); 
+   int maxEpoch = 200, epoch = 0;
+
+   float learningRate = 1e-3, trainValidRatio = 0.5;
+   int trainSize = CascLen * trainValidRatio, validSize = CascLen - trainSize;
+   int batchSize = 10;
+   int remainSize = trainSize % batchSize;
+   int batchTimes = trainSize / batchSize + ((remainSize == 0) ? 0 : 1);
+   cout<<"batchSize, "<<batchSize<<" remainSize, "<<remainSize<<" hiddenSize, "<<hiddenSize<<" inputSize, "<<inputSize
+       <<" outputSize, "<<outputSize<<" batchTimes, "<<batchTimes<<" trainSize, "<<trainSize<<endl;
+
+   fmat W1 = 0.03 * randn<fmat>(hiddenSize, inputSize), W2 = 0.03 * randn<fmat>(outputSize, hiddenSize);
+   fvec B1 = 0.03 * randn<fvec>(hiddenSize), B2 = 0.03 * randn<fvec>(outputSize);
+
+   ivec index = shuffle(linspace<ivec>(0, CascLen-1, CascLen));
+   ivec trainIndex(trainSize), validIndex(validSize);
+   for (int i=0;i<trainSize;i++) trainIndex[i] = index[i];
+   for (int i=0;i<validSize;i++) validIndex[i] = index[i + trainSize];
+
+   float validError = 1.0, lastValidError = 1.0;
+   while (epoch < maxEpoch && validError <= lastValidError) {
+      lastValidError = validError;
+      float trainingError = 0.0;
+      ivec randomIndex = shuffle(trainIndex);
+      for (int b=0; b < batchTimes; b++) {
+         //generate batches
+         int currentBatchSize = batchSize;
+         if (remainSize != 0 && b == (batchTimes -1)) currentBatchSize = remainSize;
+         int nodeNumInCascades = 0;
+         for (int i=0; i < currentBatchSize; i++) nodeNumInCascades += CascH[randomIndex[b*batchSize + i]].Len();
+         umat locations(2, nodeNumInCascades);
+         fvec values(nodeNumInCascades);
+         int n = 0;
+         for (int i=0; i < currentBatchSize; i++) {
+            TCascade& cascade = CascH[randomIndex[b*batchSize + i]];
+            for (THash< TInt, THitInfo >::TIter CI = cascade.BegI(); !CI.IsEnd(); CI++) {
+               TInt NId = CI.GetDat().NId;
+               locations(0,n) = NId();
+               locations(1,n) = i;
+               values[n] = 1.0;
+               n++;
+            }
+         }
+         sp_fmat batch = SpMat<float>(locations, values, inputSize, currentBatchSize);
+
+         //forward
+         fmat z1 = W1 * batch + repmat(B1, 1, currentBatchSize);
+         fmat a1 = sigmoid(z1);
+         fmat z2 = W2 * a1 + repmat(B2, 1, currentBatchSize);
+         fmat y = sigmoid(z2);
+
+         //square error
+         fmat error = y - batch;
+
+         //back propagate
+         float lr = learningRate / float(currentBatchSize);
+         fmat delta2 = y % (1.0 - y) % error;
+         fmat delta1 = a1 % (1.0 - a1) % (W2.t() * delta2);
+
+         //update
+         W2 -= lr * delta2 * a1.t();
+         W1 -= lr * delta1 * batch.t();
+         B2 -= lr * delta2 * ones<fmat>(currentBatchSize, 1);
+         B1 -= lr * delta1 * ones<fmat>(currentBatchSize, 1); 
+         trainingError += sum(sum(error % error));
+      }
+
+      //evaluate valid error
+      int nodeNumInValidCascades = 0;
+      for (int i=0; i < validSize; i++) nodeNumInValidCascades += CascH[validIndex[i]].Len();
+      umat locations(2, nodeNumInValidCascades);
+      fvec values(nodeNumInValidCascades);
+      int n = 0;
+      for (int i=0; i < validSize; i++) {
+         TCascade& cascade = CascH[validIndex[i]];
+         for (THash< TInt, THitInfo >::TIter CI = cascade.BegI(); !CI.IsEnd(); CI++) {
+            TInt NId = CI.GetDat().NId;
+            locations(0,n) = NId();
+            locations(1,n) = i;
+            values[n] = 1.0;
+            n++;
+         }
+      }
+      sp_fmat batch = SpMat<float>(locations, values, inputSize, validSize);
+      fmat z1 = W1 * batch + repmat(B1, 1, validSize);
+      fmat a1 = sigmoid(z1);
+      fmat z2 = W2 * a1 + repmat(B2, 1, validSize);
+      fmat y = sigmoid(z2);
+      fmat error = y - batch;
+      validError = sum(sum(error % error))/float(outputSize)/float(validSize);
+
+      cout<<"epoch: "<<epoch+1<<", training error: "<<trainingError/float(outputSize)/float(trainSize)
+                              <<", validation error: "<<validError<<endl;
+      epoch++;
+   }
+
+   for (int i=0;i<inputSize;i++) {
+      for (int j=0;j<hiddenSize;j++) {
+         TIntPr index; index.Val1 = i; index.Val2 = j;
+         lossFunction.getParameter().spreaderProperty.AddDat(index, W1(j,i));
+         lossFunction.getParameter().receiverProperty.AddDat(index, W2(i,j)); 
+      }
+   }
+} 
+

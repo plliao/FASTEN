@@ -19,8 +19,8 @@ LINKOBJS = $(LIBDIR)/Snap.o $(LIBDIR)/cascdynetinf.o $(LIBDIR)/kronecker.o
 
 CC = g++
 INCLUDEFLAGS = $(foreach dir,$(INCLUDEDIRS), -I $(dir))
-#CFLAGS = -g -Wall -ffast-math -fopenmp $(INCLUDEFLAGS)
-CFLAGS = -O3 -Wall -ffast-math -fopenmp $(INCLUDEFLAGS)
+#CFLAGS = -g -Wall -ffast-math -fopenmp -larmadillo $(INCLUDEFLAGS)
+CFLAGS = -O3 -Wall -ffast-math -fopenmp -larmadillo $(INCLUDEFLAGS)
 
 CTAGS = ctags
 CTAGFLAGS = 

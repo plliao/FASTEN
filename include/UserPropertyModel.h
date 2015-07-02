@@ -6,6 +6,14 @@
 #include <UPEM.h>
 #include <UserPropertyFunction.h>
 #include <TimeShapingFunction.h>
+#ifdef max
+#undef max
+#endif 
+#ifdef min
+#undef min
+#endif 
+#include <armadillo>
+using namespace arma;
 
 class UserPropertyModel {
    public:
@@ -72,6 +80,8 @@ class UserPropertyModel {
       void Init();
       int GetCascs() { return CascH.Len(); }
       void Infer(const TFltV&, const TStr& OutFNm);
+      void ExtractFeature();
+      fmat sigmoid(fmat&);
 };
 
 #endif
