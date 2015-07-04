@@ -440,9 +440,10 @@ void UserPropertyModel::ExtractFeature() {
       validError = sum(sum(error % error))/float(outputSize)/float(validSize);
 
       cout<<"epoch: "<<epoch+1<<", training error: "<<trainingError/float(outputSize)/float(trainSize)
-                              <<", validation error: "<<validError<<endl;
+                              <<", validation error: "<<validError<<"\033[0K\r"<<flush;
       epoch++;
    }
+   cout<<endl;
 
    for (int i=0;i<inputSize;i++) {
       for (int j=0;j<hiddenSize;j++) {

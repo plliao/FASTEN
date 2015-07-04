@@ -11,7 +11,8 @@
 #endif 
 #ifdef min
 #undef min
-#endif 
+#endif
+#define ARMA_64BIT_WORD 
 #include <armadillo>
 using namespace arma;
 
