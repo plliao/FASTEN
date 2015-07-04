@@ -356,8 +356,11 @@ void UserPropertyModel::ExtractFeature() {
    int batchSize = 10;
    int remainSize = trainSize % batchSize;
    int batchTimes = trainSize / batchSize + ((remainSize == 0) ? 0 : 1);
-   cout<<"batchSize, "<<batchSize<<" remainSize, "<<remainSize<<" hiddenSize, "<<hiddenSize<<" inputSize, "<<inputSize
-       <<" outputSize, "<<outputSize<<" batchTimes, "<<batchTimes<<" trainSize, "<<trainSize<<endl;
+   int validRemainSize = validSize % batchSize;
+   int validBatchTimes = validSize / batchSize + ((validRemainSize == 0) ? 0 : 1);
+   cout<<"batchSize, "<<batchSize<<" hiddenSize, "<<hiddenSize<<" inputSize, "<<inputSize<<" outputSize, "<<outputSize<<endl;
+   cout<<"training remainSize, "<<remainSize<<" training batchTimes, "<<batchTimes<<" trainSize, "<<trainSize<<endl;
+   cout<<"valid remainSize, "<<validRemainSize<<" valid batchTimes, "<<validBatchTimes<<" validSize, "<<validSize<<endl;
 
    fmat W1 = 0.03 * randn<fmat>(hiddenSize, inputSize), W2 = 0.03 * randn<fmat>(outputSize, hiddenSize);
    fvec B1 = 0.03 * randn<fvec>(hiddenSize), B2 = 0.03 * randn<fvec>(outputSize);
@@ -370,6 +373,7 @@ void UserPropertyModel::ExtractFeature() {
    float validError = 1.0, lastValidError = 1.0;
    while (epoch < maxEpoch && validError <= lastValidError) {
       lastValidError = validError;
+      validError = 0.0;
       float trainingError = 0.0;
       ivec randomIndex = shuffle(trainIndex);
       for (int b=0; b < batchTimes; b++) {
@@ -416,29 +420,35 @@ void UserPropertyModel::ExtractFeature() {
       }
 
       //evaluate valid error
-      int nodeNumInValidCascades = 0;
-      for (int i=0; i < validSize; i++) nodeNumInValidCascades += CascH[validIndex[i]].Len();
-      umat locations(2, nodeNumInValidCascades);
-      fvec values(nodeNumInValidCascades);
-      int n = 0;
-      for (int i=0; i < validSize; i++) {
-         TCascade& cascade = CascH[validIndex[i]];
-         for (THash< TInt, THitInfo >::TIter CI = cascade.BegI(); !CI.IsEnd(); CI++) {
-            TInt NId = CI.GetDat().NId;
-            locations(0,n) = NId();
-            locations(1,n) = i;
-            values[n] = 1.0;
-            n++;
+      for (int b=0; b < validBatchTimes; b++) {
+         int currentBatchSize = batchSize;
+         if (validRemainSize != 0 && b == (validBatchTimes -1)) currentBatchSize = validRemainSize;
+         int nodeNumInValidCascades = 0;
+         for (int i=0; i < currentBatchSize; i++) nodeNumInValidCascades += CascH[validIndex[b*batchSize + i]].Len();
+         umat locations(2, nodeNumInValidCascades);
+         fvec values(nodeNumInValidCascades);
+         int n = 0;
+         for (int i=0; i < currentBatchSize; i++) {
+            TCascade& cascade = CascH[validIndex[b*batchSize + i]];
+            for (THash< TInt, THitInfo >::TIter CI = cascade.BegI(); !CI.IsEnd(); CI++) {
+               TInt NId = CI.GetDat().NId;
+               locations(0,n) = NId();
+               locations(1,n) = i;
+               values[n] = 1.0;
+               n++;
+            }
          }
-      }
-      sp_fmat batch = SpMat<float>(locations, values, inputSize, validSize);
-      fmat z1 = W1 * batch + repmat(B1, 1, validSize);
-      fmat a1 = sigmoid(z1);
-      fmat z2 = W2 * a1 + repmat(B2, 1, validSize);
-      fmat y = sigmoid(z2);
-      fmat error = y - batch;
-      validError = sum(sum(error % error))/float(outputSize)/float(validSize);
+         sp_fmat batch = SpMat<float>(locations, values, inputSize, currentBatchSize);
 
+         fmat z1 = W1 * batch + repmat(B1, 1, currentBatchSize);
+         fmat a1 = sigmoid(z1);
+         fmat z2 = W2 * a1 + repmat(B2, 1, currentBatchSize);
+         fmat y = sigmoid(z2);
+         fmat error = y - batch;
+         validError += sum(sum(error % error));
+      }
+
+      validError /= float(outputSize)*float(validSize);
       cout<<"epoch: "<<epoch+1<<", training error: "<<trainingError/float(outputSize)/float(trainSize)
                               <<", validation error: "<<validError<<"\033[0K\r"<<flush;
       epoch++;

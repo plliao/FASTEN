@@ -28,6 +28,7 @@ class PGD {
          double time = data.time;
          THash<TInt, TCascade> &cascH = data.cascH;
          TIntFltH &cascadesIdx = data.cascadesIdx;
+         double size = (double) data.cascH.Len();
       
          while(!IsTerminate()) { 
             T parameterDiff;
@@ -39,9 +40,12 @@ class PGD {
             parameterDiff *= (configure.learningRate/double(configure.batchSize));
             f.parameter.projectedlyUpdateGradient(parameterDiff);
             iterNm++;
-            //loss = f.loss(data);
-            //printf("iterNm: %d, loss: %f\n",(int)iterNm,loss());
+            if (iterNm % 100 == 0) {
+               loss = f.loss(data)/size;
+               printf("iterNm: %d, loss: %f\033[0K\r",(int)iterNm,loss());
+            }
          }
+         printf("\n");
       }
 
       bool IsTerminate() const {

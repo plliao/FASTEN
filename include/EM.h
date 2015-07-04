@@ -77,7 +77,7 @@ class EMLikelihoodFunction : public PGDFunction<parameter> {
       virtual void maximize() = 0;
       TFlt loss(Datum datum) const {
          TFlt datumLoss = 0.0;
-         for (TInt i=0;i<latentVariableSize;i++) datumLoss += TMath::Power(TMath::E, JointLikelihood(datum,i));
+         for (TInt i=0;i<latentVariableSize;i++) datumLoss += latentDistributions.GetDat(datum.index).GetDat(i) * JointLikelihood(datum,i);
          return datumLoss;
       }
       void InitLatentVariable(Data data, EMConfigure configure) {

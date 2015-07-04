@@ -77,6 +77,7 @@ class UPEM {
          double time = data.time;
          THash<TInt, TCascade> &cascH = data.cascH;
          TIntFltH &cascadesIdx = data.cascadesIdx;
+         double size = (double) data.cascH.Len();
       
          while(coorIterNm < configure.maxCoorIterNm) {
             //maximize acquaintance
@@ -91,8 +92,12 @@ class UPEM {
                parameterDiff *= (configure.pGDConfigure.learningRate/double(configure.pGDConfigure.batchSize));
                LF.parameter.projectedlyUpdateGradient(parameterDiff);
                iterNm++;
-               //printf("iterNm: %d, loss: %f\n",(int)iterNm,loss());
+               if (iterNm % 1000 == 0) {
+                  loss = LF.PGDFunction<parameter>::loss(data)/size;
+                  printf("iterNm: %d, loss: %f\033[0K\r",(int)iterNm,loss());
+               }
             }
+            printf("\n");
 
             //maximize receiver
             iterNm = 0;
@@ -106,8 +111,12 @@ class UPEM {
                parameterDiff *= (configure.pGDConfigure.learningRate/double(configure.pGDConfigure.batchSize));
                LF.parameter.projectedlyUpdateGradient(parameterDiff);
                iterNm++;
-               //printf("iterNm: %d, loss: %f\n",(int)iterNm,loss());
+               if (iterNm % 1000 == 0) {
+                  loss = LF.PGDFunction<parameter>::loss(data)/size;
+                  printf("iterNm: %d, loss: %f\033[0K\r",(int)iterNm,loss());
+               }
             }
+            printf("\n");
 
             //maximize spreader
             /*iterNm = 0;
@@ -143,7 +152,7 @@ class UPEMLikelihoodFunction : public PGDFunction<parameter> {
       virtual THash<TInt,TFlt> getPriorTHash() const = 0;
       TFlt loss(Datum datum) const {
          TFlt datumLoss = 0.0;
-         for (TInt i=0;i<latentVariableSize;i++) datumLoss += TMath::Power(TMath::E, JointLikelihood(datum,i));
+         for (TInt i=0;i<latentVariableSize;i++) datumLoss += latentDistributions.GetDat(datum.index).GetDat(i) * JointLikelihood(datum,i);
          return datumLoss;
       }
       void InitLatentVariable(Data data, UPEMConfigure configure) {
