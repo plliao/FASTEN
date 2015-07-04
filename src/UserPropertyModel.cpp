@@ -253,7 +253,7 @@ void UserPropertyModel::Infer(const TFltV& Steps, const TStr& OutFNm) {
    em.set(eMConfigure);
    TIntFltH CascadesIdx;
    Data data = {nodeInfo.NodeNmH, CascH, CascadesIdx, 0.0};
-   ExtractFeature();
+   //ExtractFeature();
    lossFunction.InitLatentVariable(data, eMConfigure);
    lossFunction.initParameter(data, userPropertyFunctionConfigure);
    

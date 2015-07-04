@@ -30,7 +30,7 @@ class EM {
          }
       }
       bool IsTerminate() const {
-         return iterNm >= configure.maxIterNm; 
+         return iterNm > configure.maxIterNm; 
       }
       void set(EMConfigure configure) {
          this->configure = configure;;
@@ -78,7 +78,7 @@ class EMLikelihoodFunction : public PGDFunction<parameter> {
       TFlt loss(Datum datum) const {
          TFlt datumLoss = 0.0;
          for (TInt i=0;i<latentVariableSize;i++) datumLoss += latentDistributions.GetDat(datum.index).GetDat(i) * JointLikelihood(datum,i);
-         return datumLoss;
+         return -1.0 * datumLoss;
       }
       void InitLatentVariable(Data data, EMConfigure configure) {
          latentDistributions.Clr();

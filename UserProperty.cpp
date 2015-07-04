@@ -40,7 +40,10 @@ int main(int argc, char* argv[]) {
   const int BatchLen = Env.GetIfArgPrefixInt("-bl:", 1, "Number of cascades for each batch, -t:2 & -t:4 (default:1000)");
   const TStr ParamSampling = Env.GetIfArgPrefixStr("-sd:", "0.1", "Params for -t:1,2 & -t:4,5 (default:0.1)\n");
 
-  const double lr = Env.GetIfArgPrefixFlt("-g:", 0.001, "Alpha for gradient descend (default:0.01)\n");
+  const double lr = Env.GetIfArgPrefixFlt("-g:", 0.001, "Alpha for gradient descend (default:0.001)\n");
+  const double imom = Env.GetIfArgPrefixFlt("-imom:", 0.5, "initial momentum (default:0.9)\n");
+  const double fmom = Env.GetIfArgPrefixFlt("-fmom:", 0.9, "final momentum(default:0.9)\n");
+  const double momr = Env.GetIfArgPrefixFlt("-momr:", 0.2, "momentum ratio (default:0.2)\n");
   const double Aging = Env.GetIfArgPrefixFlt("-a:", 1.0, "Aging factor for non-used edges (default:1.0)\n");
   const TRegularizer Regularizer = (TRegularizer)Env.GetIfArgPrefixInt("-r:", 0, "Regularizer\n0:no, 1:l2");
   const double Mu = Env.GetIfArgPrefixFlt("-mu:", 0.01, "Mu for regularizer (default:0.01)\n");
@@ -78,6 +81,9 @@ int main(int argc, char* argv[]) {
   userProperty.SetCOMaxIterNm(COIters);
   userProperty.SetBatchSize(BatchLen);
   userProperty.SetLearningRate(lr);
+  userProperty.SetInitialMomentum(imom);
+  userProperty.SetFinalMomentum(fmom);
+  userProperty.SetMomentumRatio(momr);
   userProperty.SetParamSampling(ParamSampling);
 
   userProperty.SetLatentVariableSize(latentVariableSize);

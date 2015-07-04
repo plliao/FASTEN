@@ -51,6 +51,9 @@ class UserPropertyModel {
       void SetK(const double& k) { K = k; }
 
       void SetLearningRate(const double& lr) { eMConfigure.pGDConfigure.learningRate = lr; }
+      void SetInitialMomentum(const double& imom) { eMConfigure.initialMomentum = imom; }
+      void SetFinalMomentum(const double& fmom) { eMConfigure.finalMomentum = fmom; }
+      void SetMomentumRatio(const double& momr) { eMConfigure.momentumRatio = momr; }
       void SetBatchSize(const size_t batchSize) { eMConfigure.pGDConfigure.batchSize = batchSize;}
       void SetSampling(const TSampling sampling) { eMConfigure.pGDConfigure.sampling = sampling;} 
       void SetParamSampling(const TStr paramSampling) { eMConfigure.pGDConfigure.ParamSampling = paramSampling;}

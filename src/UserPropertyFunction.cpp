@@ -601,7 +601,7 @@ void UserPropertyParameter::set(UserPropertyFunctionConfigure configure) {
  
    TRnd rnd; rnd.PutSeed(time(NULL));
    for (TInt i=0;i<configure.topicSize;i++) {
-      kPi.AddDat(i,rnd.GetUniDevInt(1,5));
+      kPi.AddDat(i,rnd.GetUniDevInt(1,2));
       kPi_times.AddDat(i,0.0);
    }
    TFlt sum = 0.0;
@@ -613,7 +613,7 @@ void UserPropertyParameter::init(Data data, UserPropertyFunctionConfigure config
   THash<TInt, TNodeInfo> &NodeNmH = data.NodeNmH;
   TRnd rnd; rnd.PutSeed(time(NULL));
   for (THash<TInt, TNodeInfo>::TIter NI = NodeNmH.BegI(); !NI.IsEnd(); NI++) {
-     /*for (TInt index=0; index<configure.propertySize; index++) {
+     for (TInt index=0; index<configure.propertySize; index++) {
         TIntPr i; i.Val1 = NI.GetKey(); i.Val2 = index;
         //receiverProperty.AddDat(i,-1.0 * configure.propertyMaxValue() + rnd.GetUniDev() * 2.0 * configure.propertyMaxValue());
         //spreaderProperty.AddDat(i,configure.propertyMinValue() + rnd.GetUniDev() * (configure.propertyMaxValue()-configure.propertyMinValue()));
@@ -623,7 +623,7 @@ void UserPropertyParameter::init(Data data, UserPropertyFunctionConfigure config
         receiverProperty.AddDat(i,rnd.GetNrmDev(configure.propertyInitValue(), 2.0, configure.propertyMinValue(), configure.propertyMaxValue()));
         //receiverProperty.AddDat(i,rnd.GetNrmDev(0.0, 1.0, -1.0 * configure.propertyMaxValue(), configure.propertyMaxValue()));
         //printf("%d,%d receiverProperty:%f, spreaderProperty:%f\n",i.Val1(),i.Val2(),receiverProperty.GetDat(i)(),spreaderProperty.GetDat(i)());
-     }*/
+     }
 
      for (TInt topic=0; topic<configure.topicSize; topic++) {
         TIntPr i; i.Val1 = NI.GetKey(); i.Val2 = topic;

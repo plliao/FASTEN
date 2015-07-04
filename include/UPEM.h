@@ -12,6 +12,7 @@ typedef struct {
    PGDConfigure pGDConfigure;
    size_t maxIterNm, maxCoorIterNm;
    TInt latentVariableSize;
+   double initialMomentum, finalMomentum, momentumRatio;
 }UPEMConfigure;
 
 
@@ -65,6 +66,7 @@ class UPEM {
                for (TInt i=0; i < size; i++)
                   likelihood += TMath::Power(TMath::E, jointLikelihoodTable.GetDat(i) - jointLikelihoodTable.GetDat(latentVariable));
                latentDistribution.GetDat(latentVariable) = 1.0/likelihood;
+               if (latentDistribution.GetDat(latentVariable) < 0.001) latentDistribution.GetDat(latentVariable) = 0.001;
                //printf(", k:%d, p:%f",latentVariable(),latentDistribution.GetDat(latentVariable)());
             }
             //printf("\n\n");
@@ -78,6 +80,8 @@ class UPEM {
          THash<TInt, TCascade> &cascH = data.cascH;
          TIntFltH &cascadesIdx = data.cascadesIdx;
          double size = (double) data.cascH.Len();
+         size_t scale = configure.pGDConfigure.maxIterNm / 10;
+         parameter oldParameterDiff;
       
          while(coorIterNm < configure.maxCoorIterNm) {
             //maximize acquaintance
@@ -92,9 +96,10 @@ class UPEM {
                parameterDiff *= (configure.pGDConfigure.learningRate/double(configure.pGDConfigure.batchSize));
                LF.parameter.projectedlyUpdateGradient(parameterDiff);
                iterNm++;
-               if (iterNm % 1000 == 0) {
+               if (iterNm % scale == 0) {
                   loss = LF.PGDFunction<parameter>::loss(data)/size;
                   printf("iterNm: %d, loss: %f\033[0K\r",(int)iterNm,loss());
+                  fflush(stdout);
                }
             }
             printf("\n");
@@ -109,11 +114,15 @@ class UPEM {
                   parameterDiff += LF.gradient1(datum);
                }
                parameterDiff *= (configure.pGDConfigure.learningRate/double(configure.pGDConfigure.batchSize));
-               LF.parameter.projectedlyUpdateGradient(parameterDiff);
+               if (iterNm > configure.pGDConfigure.maxIterNm * configure.momentumRatio) oldParameterDiff *= configure.finalMomentum;
+               else oldParameterDiff *= configure.initialMomentum;
+               oldParameterDiff += parameterDiff;
+               LF.parameter.projectedlyUpdateGradient(oldParameterDiff);
                iterNm++;
-               if (iterNm % 1000 == 0) {
+               if (iterNm % scale == 0) {
                   loss = LF.PGDFunction<parameter>::loss(data)/size;
                   printf("iterNm: %d, loss: %f\033[0K\r",(int)iterNm,loss());
+                  fflush(stdout);
                }
             }
             printf("\n");
@@ -153,7 +162,7 @@ class UPEMLikelihoodFunction : public PGDFunction<parameter> {
       TFlt loss(Datum datum) const {
          TFlt datumLoss = 0.0;
          for (TInt i=0;i<latentVariableSize;i++) datumLoss += latentDistributions.GetDat(datum.index).GetDat(i) * JointLikelihood(datum,i);
-         return datumLoss;
+         return -1.0 * datumLoss;
       }
       void InitLatentVariable(Data data, UPEMConfigure configure) {
          latentDistributions.Clr();
