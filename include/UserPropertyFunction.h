@@ -61,6 +61,9 @@ class UserPropertyFunction : public UPEMLikelihoodFunction<UserPropertyParameter
       UserPropertyParameter& gradient2(Datum datum);
       UserPropertyParameter& gradient3(Datum datum);
       UserPropertyParameter& gradient(Datum datum);
+      void calculateRProp(TFlt, UserPropertyParameter&, UserPropertyParameter&);
+      void calculateRMSProp(TFlt, UserPropertyParameter&, UserPropertyParameter&);
+      void calculateAverageRMSProp(TFlt, TFltV&, UserPropertyParameter&);
       void initParameter(Data data, UserPropertyFunctionConfigure configure) {parameter.init(data,configure);}
       void GenParameters(TStrFltFltHNEDNet& network, UserPropertyFunctionConfigure configure) { set(configure); parameter.GenParameters(network, configure);}
       TFlt GetAlpha(TInt srcNId, TInt dstNId, TInt topic) const { return parameter.GetAlpha(srcNId, dstNId, topic);}     

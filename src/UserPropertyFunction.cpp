@@ -2,6 +2,8 @@
 #include <ctime>
 
 TFlt sigmoid(TFlt t) {
+   if (t > 1e5) t = 1e5;
+   if (t < -1e5) t = -1e-5;
    return 1.0/(1.0 + TMath::Power(TMath::E,-1.0*t));
 }
 
@@ -48,14 +50,14 @@ TFlt UserPropertyFunction::JointLikelihood(Datum datum, TInt latentVariable) con
       }
       lossTable[i] = val;
       
-      if (Cascade.IsNode(dstNId) && Cascade.GetTm(dstNId) <= CurrentTime && sumInLog!=0.0) lossTable[i] -= TMath::Log(sumInLog);
+      if (Cascade.IsNode(dstNId) && Cascade.GetTm(dstNId) <= CurrentTime && sumInLog != 0.0) lossTable[i] -= TMath::Log(sumInLog);
       
    }
 
    for (int i=0;i<nodeSize;i++) totalLoss += lossTable[i];
    delete[] lossTable;
 
-   TFlt logP = -1 * totalLoss;
+   TFlt logP = -1.0 * totalLoss;
    TFlt logPi = TMath::Log(parameter.kPi.GetDat(latentVariable));
    //printf("datum:%d, topic:%d, logP: %f, logPi=%f\n",datum.index(), latentVariable(), logP(), logPi());
    return logP + logPi;
@@ -81,6 +83,7 @@ UserPropertyParameter& UserPropertyFunction::gradient1(Datum datum) {
       TInt dstNId = key, srcNId;
       TFlt dstTime, srcTime;
 
+      TIntPr acquaintanceIndex; acquaintanceIndex.Val2 = dstNId;
       TIntPr receiverIndex, spreaderIndex;
       
       bool inCascade = false;
@@ -117,6 +120,7 @@ UserPropertyParameter& UserPropertyFunction::gradient1(Datum datum) {
       THash<TIntPr,TFlt> receiverPropertyGrad(propertySize());
       THash<TIntPr,TFlt> spreaderPropertyGrad(cascadeSize * propertySize());
       THash<TIntPr,TFlt> topicReceiveGrad(latentVariableSize());
+      THash<TIntPr,TFlt> acquaintanceGrad;
 
       for (THash<TInt, THitInfo>::TIter CascadeNI = Cascade.BegI(); CascadeNI < Cascade.EndI(); CascadeNI++) {
          srcNId = CascadeNI.GetKey();
@@ -126,6 +130,27 @@ UserPropertyParameter& UserPropertyFunction::gradient1(Datum datum) {
             
          TFlt acquaintedValue = GetAcquaitance(srcNId, dstNId);             
          TFlt propertyValue = GetPropertyValue(srcNId, dstNId);
+         
+         acquaintanceIndex.Val1 = srcNId; 
+         for (TInt latentVariable=0; latentVariable<latentVariableSize; latentVariable++) {
+            TIntPr propertyValueIndex; propertyValueIndex.Val1 = srcNId; propertyValueIndex.Val2 = latentVariable;           
+            //TFlt propertyValue = MaxAlpha * sigmoid(propertyValueVector.GetDat(propertyValueIndex)); 
+            TFlt propertyValue = sigmoid(propertyValueVector.GetDat(propertyValueIndex)); 
+            TFlt grad;
+
+            if (inCascade) {
+               TFlt topicTotalAlpha = dstAlphaVector.GetDat(latentVariable);
+               grad = shapingFunction->Integral(srcTime,dstTime) - shapingFunction->Value(srcTime,dstTime) / topicTotalAlpha;
+               //printf("%d,%d, acquaintance grad:%f, topicTotalAlpha:%f, topic:%d\n",srcNId(),dstNId(),grad(),topicTotalAlpha());
+            }
+            else
+               grad = shapingFunction->Integral(srcTime,dstTime);
+            grad *= propertyValue * latentDistributions.GetDat(datum.index).GetDat(latentVariable);
+            //printf("%d,%d, acquaintance grad:%f, topic:%d, topic probability:%f\n",srcNId(),dstNId(),grad(),latentVariable(),latentDistributions.GetDat(datum.index).GetDat(latentVariable)());
+
+            if (!acquaintanceGrad.IsKey(acquaintanceIndex)) acquaintanceGrad.AddDat(acquaintanceIndex,grad);
+            else acquaintanceGrad.GetDat(acquaintanceIndex) += grad;
+         }
                         
          spreaderIndex.Val1 = srcNId; receiverIndex.Val1 = dstNId;
          for (TInt propertyIndex=0; propertyIndex<propertySize; propertyIndex++) {
@@ -185,6 +210,11 @@ UserPropertyParameter& UserPropertyFunction::gradient1(Datum datum) {
       //critical      
       #pragma omp critical
       {
+         for (THash<TIntPr,TFlt>::TIter I = acquaintanceGrad.BegI(); !I.IsEnd(); I++) {
+            if (!parameterGrad.acquaintance.IsKey(I.GetKey())) parameterGrad.acquaintance.AddDat(I.GetKey(),I.GetDat());
+            else parameterGrad.acquaintance.GetDat(I.GetKey()) += I.GetDat();
+            //printf("%d,%d acquaintance grad:%f\n",I.GetKey().Val1(),I.GetKey().Val2(),I.GetDat()());
+         } 
          for (THash<TIntPr,TFlt>::TIter I = receiverPropertyGrad.BegI(); !I.IsEnd(); I++) {
             if (!parameterGrad.receiverProperty.IsKey(I.GetKey())) parameterGrad.receiverProperty.AddDat(I.GetKey(),I.GetDat());
             else parameterGrad.receiverProperty.GetDat(I.GetKey()) += I.GetDat();
@@ -201,6 +231,11 @@ UserPropertyParameter& UserPropertyFunction::gradient1(Datum datum) {
             //printf("%d,%d topic receive grad:%f\n",I.GetKey().Val1(),I.GetKey().Val2(),I.GetDat()());
          } 
       }
+   }
+
+   for (TInt latentVariable=0; latentVariable<latentVariableSize; latentVariable++) {
+      parameterGrad.kPi.AddDat(latentVariable, latentDistributions.GetDat(datum.index).GetDat(latentVariable));
+      parameterGrad.kPi_times.AddDat(latentVariable, 1.0);
    }
 
    return parameterGrad;
@@ -454,6 +489,59 @@ void UserPropertyFunction::maximize() {
    for (THash<TInt,TFlt>::TIter PI = parameter.kPi_times.BegI(); !PI.IsEnd(); PI++) {
       PI.GetDat() = 0.0;
    }
+}
+
+void updateRProp(TFlt initVal, THash<TIntPr,TFlt>& lr, THash<TIntPr,TFlt>& gradient) {
+   for(THash<TIntPr,TFlt>::TIter GI = gradient.BegI(); !GI.IsEnd(); GI++) {
+      TIntPr key = GI.GetKey();
+      if (!lr.IsKey(key)) {
+         lr.AddDat(key, initVal);
+         if (GI.GetDat() < 0.0) lr.GetDat(key) *= -1.0;
+      }
+      else {
+         if (GI.GetDat() * lr.GetDat(key) > 0.0) lr.GetDat(key) *= 1.2;
+         else lr.GetDat(key) *= -0.5;
+      }
+      GI.GetDat() = lr.GetDat(key);    
+   }
+}
+
+void UserPropertyFunction::calculateRProp(TFlt initVal, UserPropertyParameter& lr, UserPropertyParameter& gradient) {
+   updateRProp(initVal, lr.acquaintance, gradient.acquaintance);
+   updateRProp(initVal, lr.receiverProperty, gradient.receiverProperty);
+   updateRProp(initVal, lr.spreaderProperty, gradient.spreaderProperty);
+   updateRProp(initVal, lr.topicReceive, gradient.topicReceive);
+}
+
+void updateRMSProp(TFlt alpha, THash<TIntPr,TFlt>& lr, THash<TIntPr,TFlt>& gradient) {
+   for(THash<TIntPr,TFlt>::TIter GI = gradient.BegI(); !GI.IsEnd(); GI++) {
+      TIntPr key = GI.GetKey();
+      if (!lr.IsKey(key)) lr.AddDat(key, TMath::Sqrt(GI.GetDat() * GI.GetDat()));
+      else lr.GetDat(key) = TMath::Sqrt(alpha * lr.GetDat(key) * lr.GetDat(key) + (1.0 - alpha) * GI.GetDat() * GI.GetDat());
+      GI.GetDat() /= lr.GetDat(key);
+   }
+}
+
+void UserPropertyFunction::calculateRMSProp(TFlt alpha, UserPropertyParameter& lr, UserPropertyParameter& gradient) {
+   updateRMSProp(alpha, lr.acquaintance, gradient.acquaintance);
+   updateRMSProp(alpha, lr.receiverProperty, gradient.receiverProperty);
+   updateRMSProp(alpha, lr.spreaderProperty, gradient.spreaderProperty);
+   updateRMSProp(alpha, lr.topicReceive, gradient.topicReceive);
+}
+
+void updateAverageRMSProp(TFlt alpha, TFlt& sigma, THash<TIntPr,TFlt>& gradient) {
+   TFlt total = 0.0;
+   for(THash<TIntPr,TFlt>::TIter GI = gradient.BegI(); !GI.IsEnd(); GI++) total += GI.GetDat() * GI.GetDat();
+   sigma = alpha * sigma * sigma + (1.0 - alpha) * total;
+   sigma = TMath::Sqrt(sigma);
+   for(THash<TIntPr,TFlt>::TIter GI = gradient.BegI(); !GI.IsEnd(); GI++) GI.GetDat() /= sigma;
+}
+
+void UserPropertyFunction::calculateAverageRMSProp(TFlt alpha, TFltV& sigmaes, UserPropertyParameter& gradient) {
+   updateAverageRMSProp(alpha, sigmaes[0], gradient.acquaintance);
+   updateAverageRMSProp(alpha, sigmaes[1], gradient.receiverProperty);
+   updateAverageRMSProp(alpha, sigmaes[2], gradient.spreaderProperty);
+   updateAverageRMSProp(alpha, sigmaes[3], gradient.topicReceive);
 }
 
 UserPropertyParameter::UserPropertyParameter() {

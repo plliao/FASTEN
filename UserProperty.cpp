@@ -41,6 +41,7 @@ int main(int argc, char* argv[]) {
   const TStr ParamSampling = Env.GetIfArgPrefixStr("-sd:", "0.1", "Params for -t:1,2 & -t:4,5 (default:0.1)\n");
 
   const double lr = Env.GetIfArgPrefixFlt("-g:", 0.001, "Alpha for gradient descend (default:0.001)\n");
+  const double rmsAlpha = Env.GetIfArgPrefixFlt("-ralpha:", 0.5, "RMSProb alpha (default:0.5)\n");
   const double imom = Env.GetIfArgPrefixFlt("-imom:", 0.5, "initial momentum (default:0.9)\n");
   const double fmom = Env.GetIfArgPrefixFlt("-fmom:", 0.9, "final momentum(default:0.9)\n");
   const double momr = Env.GetIfArgPrefixFlt("-momr:", 0.2, "momentum ratio (default:0.2)\n");
@@ -81,6 +82,7 @@ int main(int argc, char* argv[]) {
   userProperty.SetCOMaxIterNm(COIters);
   userProperty.SetBatchSize(BatchLen);
   userProperty.SetLearningRate(lr);
+  userProperty.SetRMSProbAlpha(rmsAlpha);
   userProperty.SetInitialMomentum(imom);
   userProperty.SetFinalMomentum(fmom);
   userProperty.SetMomentumRatio(momr);
@@ -225,6 +227,7 @@ int main(int argc, char* argv[]) {
   userProperty.Init();
   userProperty.Infer(Steps, OutFNm);
   userProperty.SaveInferred(TStr::Fmt("%s.txt", OutFNm.CStr()));
+  userProperty.SaveUserProperty(TStr::Fmt("%s_UserProperty.txt", OutFNm.CStr()));
   
   Catch
   printf("\nrun time: %s (%s)\n", ExeTm.GetTmStr(), TSecTm::GetCurTm().GetTmStr().CStr());

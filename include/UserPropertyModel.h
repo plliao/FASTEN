@@ -37,6 +37,7 @@ class UserPropertyModel {
       void LoadCascadesTxt(const TStr& InFNm);
       void LoadGroundTruthTxt(const TStr& InFNm);
       void SaveInferred(const TStr& OutFNm);
+      void SaveUserProperty(const TStr& OutFNm);
 
       void GenParameters() { lossFunction.GenParameters(Network,userPropertyFunctionConfigure);}
       void GenCascade(TCascade& c);
@@ -52,6 +53,7 @@ class UserPropertyModel {
       void SetK(const double& k) { K = k; }
 
       void SetLearningRate(const double& lr) { eMConfigure.pGDConfigure.learningRate = lr; }
+      void SetRMSProbAlpha(const double& rmsAlpha) { eMConfigure.rmsAlpha = rmsAlpha; }
       void SetInitialMomentum(const double& imom) { eMConfigure.initialMomentum = imom; }
       void SetFinalMomentum(const double& fmom) { eMConfigure.finalMomentum = fmom; }
       void SetMomentumRatio(const double& momr) { eMConfigure.momentumRatio = momr; }

@@ -19,6 +19,37 @@ void UserPropertyModel::SaveInferred(const TStr& OutFNm) {
    InfoPathFileIO::SaveNetwork(OutFNm, InferredNetwork, nodeInfo, edgeInfo);
 }
 
+void UserPropertyModel::SaveUserProperty(const TStr& OutFNm) {
+  TFOut FOut(OutFNm);
+  UserPropertyParameter& parameter = lossFunction.getParameter();
+  for (THash<TInt, TNodeInfo>::TIter NI = nodeInfo.NodeNmH.BegI(); NI < nodeInfo.NodeNmH.EndI(); NI++) {
+     TInt NId = NI.GetKey();
+     FOut.PutStr(TStr::Fmt("%d;", NId()));
+     TIntPr index; index.Val1 = NId;
+     for (TInt property = 0; property < parameter.propertySize; property++) {
+        index.Val2 = property;
+        FOut.PutStr(TStr::Fmt("%f", parameter.spreaderProperty.GetDat(index)()));
+        if (property!=parameter.propertySize-1) FOut.PutStr(",");
+     }
+     FOut.PutStr(";");
+
+     for (TInt property = 0; property < parameter.propertySize; property++) {
+        index.Val2 = property;
+        FOut.PutStr(TStr::Fmt("%f", parameter.receiverProperty.GetDat(index)()));
+        if (property!=parameter.propertySize-1) FOut.PutStr(",");
+     }
+     FOut.PutStr(";");
+
+     TInt latentVariableSize = parameter.kPi.Len();
+     for (TInt latentVariable = 0; latentVariable < latentVariableSize; latentVariable++) {
+        index.Val2 = latentVariable;
+        FOut.PutStr(TStr::Fmt("%f", parameter.topicReceive.GetDat(index)()));
+        if (latentVariable!=latentVariableSize-1) FOut.PutStr(",");
+     }
+     FOut.PutStr("\n");
+  }
+}
+
 void UserPropertyModel::GenCascade(TCascade& C) {
 	bool verbose = false;
 	TIntFltH InfectedNIdH; TIntH InfectedBy;

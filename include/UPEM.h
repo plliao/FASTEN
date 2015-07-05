@@ -12,7 +12,7 @@ typedef struct {
    PGDConfigure pGDConfigure;
    size_t maxIterNm, maxCoorIterNm;
    TInt latentVariableSize;
-   double initialMomentum, finalMomentum, momentumRatio;
+   double initialMomentum, finalMomentum, momentumRatio, rmsAlpha;
 }UPEMConfigure;
 
 
@@ -78,7 +78,7 @@ class UPEM {
                jointLikelihoodTable.AddDat(latentVariable, LF.JointLikelihood(datum,latentVariable));
             }
 
-            //printf("\nindex:%d",CI.GetKey()());
+            //printf("\nindex:%d", key());
             THash<TInt,TFlt> &latentDistribution = LF.latentDistributions.GetDat(key);
             for (TInt latentVariable=0; latentVariable < size; latentVariable++) {
                TFlt likelihood = 0.0;
@@ -99,10 +99,11 @@ class UPEM {
          THash<TInt, TCascade> &cascH = data.cascH;
          TIntFltH &cascadesIdx = data.cascadesPositions, sampledCascadesPositionsHash;
          size_t scale = configure.pGDConfigure.maxIterNm / 1;
-         parameter oldParameterDiff;
+         parameter oldParameterDiff, learningRates;
+         TFltV sigmaes(4); sigmaes.Add(0.0); sigmaes.Add(0.0); sigmaes.Add(0.0); sigmaes.Add(0.0);
       
          while(coorIterNm < configure.maxCoorIterNm) {
-            //maximize acquaintance
+            /*//maximize acquaintance
             iterNm = 0;
             size_t sampledIndex = coorIterNm * configure.pGDConfigure.maxIterNm * configure.pGDConfigure.batchSize;
             while(iterNm < configure.pGDConfigure.maxIterNm) { 
@@ -125,12 +126,13 @@ class UPEM {
                   fflush(stdout);
                }
             }
-            printf("\n");
+            printf("\n");*/
 
             //maximize receiver
             iterNm = 0;
-            sampledIndex = coorIterNm * configure.pGDConfigure.maxIterNm * configure.pGDConfigure.batchSize;
-            sampledCascadesPositionsHash.Clr();
+            size_t sampledIndex = coorIterNm * configure.pGDConfigure.maxIterNm * configure.pGDConfigure.batchSize;
+            TFlt oldLoss = DBL_MAX; loss = DBL_MAX;
+            //sampledCascadesPositionsHash.Clr();
             while(iterNm < configure.pGDConfigure.maxIterNm) { 
                parameter parameterDiff;
                for (size_t i=0;i<configure.pGDConfigure.batchSize;i++) {
@@ -140,13 +142,19 @@ class UPEM {
                   parameterDiff += LF.gradient1(datum);
                   sampledIndex++;
                }
-               parameterDiff *= (configure.pGDConfigure.learningRate/double(configure.pGDConfigure.batchSize));
-               if (iterNm > configure.pGDConfigure.maxIterNm * configure.momentumRatio) oldParameterDiff *= configure.finalMomentum;
-               else oldParameterDiff *= configure.initialMomentum;
-               oldParameterDiff += parameterDiff;
-               LF.parameter.projectedlyUpdateGradient(oldParameterDiff);
+               parameterDiff *= (1.0/double(configure.pGDConfigure.batchSize));
+               //parameterDiff *= (configure.pGDConfigure.learningRate/double(configure.pGDConfigure.batchSize));
+               //if (iterNm > configure.pGDConfigure.maxIterNm * configure.momentumRatio) oldParameterDiff *= configure.finalMomentum;
+               //else oldParameterDiff *= configure.initialMomentum;
+               //oldParameterDiff += parameterDiff;
+               //LF.parameter.projectedlyUpdateGradient(oldParameterDiff);
+               //LF.calculateRProp(configure.pGDConfigure.learningRate, learningRates, parameterDiff);
+               LF.calculateAverageRMSProp(configure.rmsAlpha, sigmaes, parameterDiff);
+               parameterDiff *= configure.pGDConfigure.learningRate;
+               LF.parameter.projectedlyUpdateGradient(parameterDiff);
                iterNm++;
                if (iterNm % scale == 0) {
+                  oldLoss = loss;
                   double size = (double) sampledCascadesPositionsHash.Len();
                   Data sampledData = {data.NodeNmH, data.cascH, sampledCascadesPositionsHash, data.time};
                   loss = LF.PGDFunction<parameter>::loss(sampledData)/size;
@@ -187,6 +195,9 @@ class UPEMLikelihoodFunction : public PGDFunction<parameter> {
       virtual parameter& gradient1(Datum datum) = 0;
       virtual parameter& gradient2(Datum datum) = 0;
       virtual parameter& gradient3(Datum datum) = 0;
+      virtual void calculateRProp(TFlt, parameter&, parameter&) = 0;
+      virtual void calculateRMSProp(TFlt, parameter&, parameter&) = 0;
+      virtual void calculateAverageRMSProp(TFlt, TFltV&, parameter&) = 0;
       virtual THash<TInt,TFlt> getPriorTHash() const = 0;
       TFlt loss(Datum datum) const {
          TFlt datumLoss = 0.0;
