@@ -2,8 +2,8 @@
 #include <kronecker.h>
 #include <InfoPathFileIO.h>
 #include <cmath>
-#include <iostream>
-using namespace std;
+//#include <iostream>
+//using namespace std;
 
 void UserPropertyModel::LoadCascadesTxt(const TStr& InFNm) {
    TFIn FIn(InFNm);
@@ -251,8 +251,8 @@ void UserPropertyModel::Infer(const TFltV& Steps, const TStr& OutFNm) {
    } 
    lossFunction.set(userPropertyFunctionConfigure);
    em.set(eMConfigure);
-   TIntFltH CascadesIdx;
-   Data data = {nodeInfo.NodeNmH, CascH, CascadesIdx, 0.0};
+   TIntFltH CascadesPositions;
+   Data data = {nodeInfo.NodeNmH, CascH, CascadesPositions, 0.0};
    //ExtractFeature();
    lossFunction.InitLatentVariable(data, eMConfigure);
    lossFunction.initParameter(data, userPropertyFunctionConfigure);
@@ -261,16 +261,16 @@ void UserPropertyModel::Infer(const TFltV& Steps, const TStr& OutFNm) {
    TStrV ParamSamplingV; eMConfigure.pGDConfigure.ParamSampling.SplitOnAllCh(';', ParamSamplingV);
 
    for (int t=1; t<Steps.Len(); t++) {
-      TIntFltH CascadesIdx;
+      TIntFltH CascadesPositions;
       for (int i=0; i<CascH.Len(); i++) {
          if (CascH[i].LenBeforeT(Steps[t]) > 1 &&
             ( (Sampling!=WIN_SAMPLING && Sampling!=WIN_EXP_SAMPLING) ||
               (Sampling==WIN_SAMPLING && (Steps[t]-CascH[i].GetMinTm()) <= ParamSamplingV[0].GetFlt()) ||
               (Sampling==WIN_EXP_SAMPLING && (Steps[t]-CascH[i].GetMinTm()) <= ParamSamplingV[0].GetFlt()) )) {
-            CascadesIdx.AddDat(i) = CascH[i].GetMinTm();
+            CascadesPositions.AddDat(i) = CascH[i].GetMinTm();
          }
       }
-      Data data = {nodeInfo.NodeNmH, CascH, CascadesIdx, Steps[t]};
+      Data data = {nodeInfo.NodeNmH, CascH, CascadesPositions, Steps[t]};
       em.Optimize(lossFunction, data);
 
       printf("prior probability:");
@@ -335,7 +335,7 @@ void UserPropertyModel::Infer(const TFltV& Steps, const TStr& OutFNm) {
    delete userPropertyFunctionConfigure.shapingFunction;
 }
 
-fmat UserPropertyModel::sigmoid(fmat& z) {
+/*fmat UserPropertyModel::sigmoid(fmat& z) {
    int row = z.n_rows, col = z.n_cols;
    fmat s = zeros<fmat>(row,col);
    for (int i=0;i<row;i++) 
@@ -463,4 +463,4 @@ void UserPropertyModel::ExtractFeature() {
       }
    }
 } 
-
+*/

@@ -27,14 +27,15 @@ class PGD {
       
          double time = data.time;
          THash<TInt, TCascade> &cascH = data.cascH;
-         TIntFltH &cascadesIdx = data.cascadesIdx;
-         double size = (double) data.cascH.Len();
-         size_t scale = configure.maxIterNm / 100;
+         TIntFltH &cascadesIdx = data.cascadesPositions;
+         size_t scale = configure.maxIterNm / 10;
+         TIntFltH sampledCascadesPositions;
       
          while(!IsTerminate()) { 
             T parameterDiff;
             for (size_t i=0;i<configure.batchSize;i++) {
                int index = InfoPathSampler::sample(configure.sampling, configure.ParamSampling, cascadesIdx.Len());
+               sampledCascadesPositions.AddDat(cascadesIdx.GetKey(index), 0.0);
                Datum datum = {data.NodeNmH, cascH, cascH.GetKey(cascadesIdx.GetKey(index)), time};
                parameterDiff += f.gradient(datum);
             }
@@ -42,7 +43,9 @@ class PGD {
             f.parameter.projectedlyUpdateGradient(parameterDiff);
             iterNm++;
             if (iterNm % scale == 0) {
-               loss = f.loss(data)/size;
+               double size = (double) sampledCascadesPositions.Len();
+               Data sampleData = {data.NodeNmH, data.cascH, sampledCascadesPositions, data.time};
+               loss = f.loss(sampleData)/size;
                printf("iterNm: %d, loss: %f\033[0K\r",(int)iterNm,loss());
                fflush(stdout);
             }
@@ -51,7 +54,7 @@ class PGD {
       }
 
       bool IsTerminate() const {
-         return iterNm > configure.maxIterNm;
+         return iterNm >= configure.maxIterNm;
       }
    private:
       PGDConfigure configure;
@@ -67,9 +70,10 @@ class PGDFunction {
       virtual TFlt loss(Datum datum) const = 0;
       TFlt loss(Data data) const {
          TFlt totalLoss = 0.0;
-         THash<TInt, TCascade> &cascH = data.cascH;
-         for (THash<TInt, TCascade>::TIter CI = cascH.BegI(); CI < cascH.EndI(); CI++) {
-            Datum datum = {data.NodeNmH, cascH, CI.GetKey(), data.time};
+         TIntFltH &cascadesPositions = data.cascadesPositions;
+         for (TIntFltH::TIter CI = cascadesPositions.BegI(); !CI.IsEnd(); CI++) {
+            TInt index = CI.GetKey();
+            Datum datum = {data.NodeNmH, data.cascH, data.cascH.GetKey(index), data.time};
             totalLoss += loss(datum);
          } 
          return totalLoss;

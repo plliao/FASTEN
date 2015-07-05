@@ -13,7 +13,7 @@ struct Datum {
 struct Data {
    THash<TInt, TNodeInfo> &NodeNmH;
    THash<TInt, TCascade> &cascH;
-   TIntFltH &cascadesIdx;
+   TIntFltH &cascadesPositions;
    double time;
 };
 

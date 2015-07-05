@@ -30,7 +30,7 @@ class EM {
          }
       }
       bool IsTerminate() const {
-         return iterNm > configure.maxIterNm; 
+         return iterNm >= configure.maxIterNm; 
       }
       void set(EMConfigure configure) {
          this->configure = configure;;

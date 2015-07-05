@@ -78,9 +78,9 @@ class UPEM {
       
          double time = data.time;
          THash<TInt, TCascade> &cascH = data.cascH;
-         TIntFltH &cascadesIdx = data.cascadesIdx;
-         double size = (double) data.cascH.Len();
+         TIntFltH &cascadesIdx = data.cascadesPositions;
          size_t scale = configure.pGDConfigure.maxIterNm / 10;
+         TIntFltH sampledCascadesPositions;
          parameter oldParameterDiff;
       
          while(coorIterNm < configure.maxCoorIterNm) {
@@ -90,6 +90,7 @@ class UPEM {
                parameter parameterDiff;
                for (size_t i=0;i<configure.pGDConfigure.batchSize;i++) {
                   int index = InfoPathSampler::sample(configure.pGDConfigure.sampling, configure.pGDConfigure.ParamSampling, cascadesIdx.Len());
+                  sampledCascadesPositions.AddDat(cascadesIdx.GetKey(index), 0.0);
                   Datum datum = {data.NodeNmH, cascH, cascH.GetKey(cascadesIdx.GetKey(index)), time};
                   parameterDiff += LF.gradient3(datum);
                }
@@ -97,7 +98,9 @@ class UPEM {
                LF.parameter.projectedlyUpdateGradient(parameterDiff);
                iterNm++;
                if (iterNm % scale == 0) {
-                  loss = LF.PGDFunction<parameter>::loss(data)/size;
+                  double size = (double) sampledCascadesPositions.Len();
+                  Data sampledData = {data.NodeNmH, data.cascH, sampledCascadesPositions, data.time};
+                  loss = LF.PGDFunction<parameter>::loss(sampledData)/size;
                   printf("iterNm: %d, loss: %f\033[0K\r",(int)iterNm,loss());
                   fflush(stdout);
                }
@@ -106,10 +109,12 @@ class UPEM {
 
             //maximize receiver
             iterNm = 0;
+            sampledCascadesPositions.Clr();
             while(iterNm < configure.pGDConfigure.maxIterNm) { 
                parameter parameterDiff;
                for (size_t i=0;i<configure.pGDConfigure.batchSize;i++) {
                   int index = InfoPathSampler::sample(configure.pGDConfigure.sampling, configure.pGDConfigure.ParamSampling, cascadesIdx.Len());
+                  sampledCascadesPositions.AddDat(cascadesIdx.GetKey(index), 0.0);
                   Datum datum = {data.NodeNmH, cascH, cascH.GetKey(cascadesIdx.GetKey(index)), time};
                   parameterDiff += LF.gradient1(datum);
                }
@@ -120,7 +125,9 @@ class UPEM {
                LF.parameter.projectedlyUpdateGradient(oldParameterDiff);
                iterNm++;
                if (iterNm % scale == 0) {
-                  loss = LF.PGDFunction<parameter>::loss(data)/size;
+                  double size = (double) sampledCascadesPositions.Len();
+                  Data sampledData = {data.NodeNmH, data.cascH, sampledCascadesPositions, data.time};
+                  loss = LF.PGDFunction<parameter>::loss(sampledData)/size;
                   printf("iterNm: %d, loss: %f\033[0K\r",(int)iterNm,loss());
                   fflush(stdout);
                }

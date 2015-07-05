@@ -39,16 +39,16 @@ void Info::Infer(const TFltV& Steps) {
    TStrV ParamSamplingV; pGDConfigure.ParamSampling.SplitOnAllCh(';', ParamSamplingV);
 
    for (int t=1; t<Steps.Len(); t++) {
-      TIntFltH CascadesIdx;
+      TIntFltH CascadesPositions;
       for (int i=0; i<CascH.Len(); i++) {
          if (CascH[i].LenBeforeT(Steps[t]) > 1 &&
             ( (Sampling!=WIN_SAMPLING && Sampling!=WIN_EXP_SAMPLING) ||
               (Sampling==WIN_SAMPLING && (Steps[t]-CascH[i].GetMinTm()) <= ParamSamplingV[0].GetFlt()) ||
               (Sampling==WIN_EXP_SAMPLING && (Steps[t]-CascH[i].GetMinTm()) <= ParamSamplingV[0].GetFlt()) )) {
-            CascadesIdx.AddDat(i) = CascH[i].GetMinTm();
+            CascadesPositions.AddDat(i) = CascH[i].GetMinTm();
          }
       }
-      Data data = {nodeInfo.NodeNmH, CascH, CascadesIdx, Steps[t]};
+      Data data = {nodeInfo.NodeNmH, CascH, CascadesPositions, Steps[t]};
       pgd.Optimize(lossFunction, data);
 
       const THash<TIntPr, TFlt> &alphas = lossFunction.getParameter().getAlphas();
