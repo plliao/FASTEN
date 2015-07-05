@@ -28,7 +28,7 @@ class PGD {
          double time = data.time;
          THash<TInt, TCascade> &cascH = data.cascH;
          TIntFltH &cascadesIdx = data.cascadesPositions;
-         size_t scale = configure.maxIterNm / 10;
+         size_t scale = configure.maxIterNm / 1;
          TIntFltH sampledCascadesPositions;
       
          while(!IsTerminate()) { 
