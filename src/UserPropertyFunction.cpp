@@ -2,8 +2,8 @@
 #include <ctime>
 
 TFlt sigmoid(TFlt t) {
-   if (t > 1e5) t = 1e5;
-   if (t < -1e5) t = -1e-5;
+   if (t > 1000.0) t = 1000.0;
+   if (t < -1000.0) t = -1000.0;
    return 1.0/(1.0 + TMath::Power(TMath::E,-1.0*t));
 }
 
@@ -51,7 +51,7 @@ TFlt UserPropertyFunction::JointLikelihood(Datum datum, TInt latentVariable) con
       lossTable[i] = val;
       
       if (Cascade.IsNode(dstNId) && Cascade.GetTm(dstNId) <= CurrentTime && sumInLog != 0.0) lossTable[i] -= TMath::Log(sumInLog);
-      
+      if (lossTable[i] < -10.0) lossTable[i] = -10.0;   
    }
 
    for (int i=0;i<nodeSize;i++) totalLoss += lossTable[i];

@@ -22,10 +22,11 @@ class UPEM {
       void Optimize(UPEMLikelihoodFunction<parameter> &LF, Data data) {
          emIterNm = 0;
 
-         sampledCascadesPositions.Reserve(configure.maxCoorIterNm * configure.pGDConfigure.maxIterNm * configure.pGDConfigure.batchSize);
 
          while(!IsTerminate()) {
 
+            sampledCascadesPositions.Clr();
+            sampledCascadesPositions.Reserve(configure.maxCoorIterNm * configure.pGDConfigure.maxIterNm * configure.pGDConfigure.batchSize);
             coorIterNm = 0;
             while(coorIterNm < configure.maxCoorIterNm) {
                iterNm = 0;
