@@ -703,25 +703,15 @@ void UserPropertyParameter::init(Data data, UserPropertyFunctionConfigure config
   for (THash<TInt, TNodeInfo>::TIter NI = NodeNmH.BegI(); !NI.IsEnd(); NI++) {
      for (TInt index=0; index<configure.propertySize; index++) {
         TIntPr i; i.Val1 = NI.GetKey(); i.Val2 = index;
-        //receiverProperty.AddDat(i,-1.0 * configure.propertyMaxValue() + rnd.GetUniDev() * 2.0 * configure.propertyMaxValue());
-        //spreaderProperty.AddDat(i,configure.propertyMinValue() + rnd.GetUniDev() * (configure.propertyMaxValue()-configure.propertyMinValue()));
-        //spreaderProperty.AddDat(i,configure.propertyInitValue());
-        //receiverProperty.AddDat(i,configure.propertyInitValue());
-        spreaderProperty.AddDat(i,rnd.GetNrmDev(configure.propertyInitValue(), 2.0, configure.propertyMinValue(), configure.propertyMaxValue()));
-        receiverProperty.AddDat(i,rnd.GetNrmDev(configure.propertyInitValue(), 2.0, configure.propertyMinValue(), configure.propertyMaxValue()));
-        //receiverProperty.AddDat(i,rnd.GetNrmDev(0.0, 1.0, -1.0 * configure.propertyMaxValue(), configure.propertyMaxValue()));
+        spreaderProperty.AddDat(i,rnd.GetNrmDev(configure.propertyInitValue(), 0.001, configure.propertyMinValue(), configure.propertyMaxValue()));
+        receiverProperty.AddDat(i,rnd.GetNrmDev(configure.propertyInitValue(), 0.001, configure.propertyMinValue(), configure.propertyMaxValue()));
         //printf("%d,%d receiverProperty:%f, spreaderProperty:%f\n",i.Val1(),i.Val2(),receiverProperty.GetDat(i)(),spreaderProperty.GetDat(i)());
      }
 
      for (TInt topic=0; topic<configure.topicSize; topic++) {
         TIntPr i; i.Val1 = NI.GetKey(); i.Val2 = topic;
-        //topicReceive.AddDat(i,-1.0 * configure.propertyMaxValue() + rnd.GetUniDev() * 2.0 * configure.propertyMaxValue());
-        //topicSpread.AddDat(i,configure.topicMinValue() + rnd.GetUniDev() * (configure.topicMaxValue()-configure.topicMinValue()));
         topicSpread.AddDat(i,1.0);
         topicReceive.AddDat(i,rnd.GetNrmDev(configure.topicInitValue(), configure.topicStdValue(), configure.topicMinValue(), configure.topicMaxValue()));
-        //topicSpread.AddDat(i,rnd.GetNrmDev(configure.topicInitValue(), 0.001, configure.topicMinValue(), configure.topicMaxValue()));
-        //topicReceive.AddDat(i,rnd.GetNrmDev(configure.topicInitValue(), 0.001, configure.topicMinValue(), configure.topicMaxValue()));
-        //topicReceive.AddDat(i,rnd.GetNrmDev(0.0, 1.0, -1.0 * configure.topicMaxValue(), configure.topicMaxValue()));
         //printf("%d,%d topicReceive:%f, topicSpread:%f\n",i.Val1(),i.Val2(),topicReceive.GetDat(i)(),topicSpread.GetDat(i)());
      }
   } 

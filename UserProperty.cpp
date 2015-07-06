@@ -57,9 +57,9 @@ int main(int argc, char* argv[]) {
   const double propertyMaxValue = Env.GetIfArgPrefixFlt("-upv:", 5.0, "Maximum property value (default:10)\n");
 
   const double topicInitValue = Env.GetIfArgPrefixFlt("-itv:", 0.0, "Initial topic value (default:1)\n");
-  const double topicStdValue = Env.GetIfArgPrefixFlt("-stv:", 1.0, "Initial topic value std (default:1.0)\n");
-  const double topicMinValue = Env.GetIfArgPrefixFlt("-ltv:", -100.0, "Minimum topic value (default:0.1)\n");
-  const double topicMaxValue = Env.GetIfArgPrefixFlt("-utv:", 100.0, "Maximum topic value (default:10)\n");
+  const double topicStdValue = Env.GetIfArgPrefixFlt("-stv:", 0.001, "Initial topic value std (default:1.0)\n");
+  const double topicMinValue = Env.GetIfArgPrefixFlt("-ltv:", -25.0, "Minimum topic value (default:0.1)\n");
+  const double topicMaxValue = Env.GetIfArgPrefixFlt("-utv:", 25.0, "Maximum topic value (default:10)\n");
   
   const double acquaintanceInitValue = Env.GetIfArgPrefixFlt("-iav:", 0.01, "Initial acquaintance value (default:0.01)\n");
   const double acquaintanceMinValue = Env.GetIfArgPrefixFlt("-lav:", 0.0005, "Minimum acquaintance value (default:0.0)\n");

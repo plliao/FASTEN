@@ -21,8 +21,7 @@ class UPEM {
    public:
       void Optimize(UPEMLikelihoodFunction<parameter> &LF, Data data) {
          emIterNm = 0;
-
-
+ 
          while(!IsTerminate()) {
 
             sampledCascadesPositions.Clr();
@@ -65,7 +64,7 @@ class UPEM {
    private:
       UPEMConfigure configure;
       size_t iterNm, coorIterNm, emIterNm;
-      TFlt loss;
+      TFlt loss, oldLoss;
       TIntV sampledCascadesPositions;
 
       void Expectation(UPEMLikelihoodFunction<parameter> &LF, Data data) const {
@@ -87,6 +86,7 @@ class UPEM {
                   likelihood += TMath::Power(TMath::E, jointLikelihoodTable.GetDat(i) - jointLikelihoodTable.GetDat(latentVariable));
                latentDistribution.GetDat(latentVariable) = 1.0/likelihood;
                if (latentDistribution.GetDat(latentVariable) < 0.001) latentDistribution.GetDat(latentVariable) = 0.001;
+               //if (latentDistribution.GetDat(latentVariable) > 0.95) latentDistribution.GetDat(latentVariable) = 0.95;
                //printf(", k:%d, p:%f",latentVariable(),latentDistribution.GetDat(latentVariable)());
             }
             //printf("\n\n");
@@ -100,40 +100,11 @@ class UPEM {
          THash<TInt, TCascade> &cascH = data.cascH;
          TIntFltH &cascadesIdx = data.cascadesPositions, sampledCascadesPositionsHash;
          size_t scale = configure.pGDConfigure.maxIterNm / 1;
-         parameter oldParameterDiff, learningRates;
          TFltV sigmaes(4); sigmaes.Add(0.0); sigmaes.Add(0.0); sigmaes.Add(0.0); sigmaes.Add(0.0);
       
          while(coorIterNm < configure.maxCoorIterNm) {
-            /*//maximize acquaintance
             iterNm = 0;
             size_t sampledIndex = coorIterNm * configure.pGDConfigure.maxIterNm * configure.pGDConfigure.batchSize;
-            while(iterNm < configure.pGDConfigure.maxIterNm) { 
-               parameter parameterDiff;
-               for (size_t i=0;i<configure.pGDConfigure.batchSize;i++) {
-                  int index = sampledCascadesPositions[sampledIndex];
-                  sampledCascadesPositionsHash.AddDat(cascadesIdx.GetKey(index), 0.0);
-                  Datum datum = {data.NodeNmH, cascH, cascH.GetKey(cascadesIdx.GetKey(index)), time};
-                  parameterDiff += LF.gradient3(datum);
-                  sampledIndex++;
-               }
-               parameterDiff *= (configure.pGDConfigure.learningRate/double(configure.pGDConfigure.batchSize));
-               LF.parameter.projectedlyUpdateGradient(parameterDiff);
-               iterNm++;
-               if (iterNm % scale == 0) {
-                  double size = (double) sampledCascadesPositionsHash.Len();
-                  Data sampledData = {data.NodeNmH, data.cascH, sampledCascadesPositionsHash, data.time};
-                  loss = LF.PGDFunction<parameter>::loss(sampledData)/size;
-                  printf("iterNm: %d, loss: %f\033[0K\r",(int)iterNm,loss());
-                  fflush(stdout);
-               }
-            }
-            printf("\n");*/
-
-            //maximize receiver
-            iterNm = 0;
-            size_t sampledIndex = coorIterNm * configure.pGDConfigure.maxIterNm * configure.pGDConfigure.batchSize;
-            TFlt oldLoss = DBL_MAX; loss = DBL_MAX;
-            //sampledCascadesPositionsHash.Clr();
             while(iterNm < configure.pGDConfigure.maxIterNm) { 
                parameter parameterDiff;
                for (size_t i=0;i<configure.pGDConfigure.batchSize;i++) {
@@ -144,18 +115,11 @@ class UPEM {
                   sampledIndex++;
                }
                parameterDiff *= (1.0/double(configure.pGDConfigure.batchSize));
-               //parameterDiff *= (configure.pGDConfigure.learningRate/double(configure.pGDConfigure.batchSize));
-               //if (iterNm > configure.pGDConfigure.maxIterNm * configure.momentumRatio) oldParameterDiff *= configure.finalMomentum;
-               //else oldParameterDiff *= configure.initialMomentum;
-               //oldParameterDiff += parameterDiff;
-               //LF.parameter.projectedlyUpdateGradient(oldParameterDiff);
-               //LF.calculateRProp(configure.pGDConfigure.learningRate, learningRates, parameterDiff);
                LF.calculateAverageRMSProp(configure.rmsAlpha, sigmaes, parameterDiff);
                parameterDiff *= configure.pGDConfigure.learningRate;
                LF.parameter.projectedlyUpdateGradient(parameterDiff);
                iterNm++;
                if (iterNm % scale == 0) {
-                  oldLoss = loss;
                   double size = (double) sampledCascadesPositionsHash.Len();
                   Data sampledData = {data.NodeNmH, data.cascH, sampledCascadesPositionsHash, data.time};
                   loss = LF.PGDFunction<parameter>::loss(sampledData)/size;
@@ -165,20 +129,6 @@ class UPEM {
             }
             printf("\n");
 
-            //maximize spreader
-            /*iterNm = 0;
-            while(iterNm < configure.pGDConfigure.maxIterNm) { 
-               parameter parameterDiff;
-               for (size_t i=0;i<configure.pGDConfigure.batchSize;i++) {
-                  int index = InfoPathSampler::sample(configure.pGDConfigure.sampling, configure.pGDConfigure.ParamSampling, cascadesIdx.Len());
-                  Datum datum = {data.NodeNmH, cascH, cascH.GetKey(cascadesIdx.GetKey(index)), time};
-                  parameterDiff += LF.gradient2(datum);
-               }
-               parameterDiff *= (0.1 * configure.pGDConfigure.learningRate/double(configure.pGDConfigure.batchSize));
-               LF.parameter.projectedlyUpdateGradient(parameterDiff);
-               iterNm++;
-               //printf("iterNm: %d, loss: %f\n",(int)iterNm,loss());
-            }*/
             coorIterNm++;
             printf("COOR iteration:%d\n",(int)coorIterNm);
             fflush(stdout);

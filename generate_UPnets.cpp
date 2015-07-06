@@ -111,6 +111,7 @@ int main(int argc, char* argv[]) {
   InfoPathFileIO::SaveNetwork(TStr::Fmt("%s-network.txt", FileName.CStr()), userProperty.Network, userProperty.nodeInfo, userProperty.edgeInfo);
   // Save Cascades
   InfoPathFileIO::SaveCascades(TStr::Fmt("%s-cascades.txt", FileName.CStr()), userProperty.CascH, userProperty.nodeInfo);
+  userProperty.SaveUserProperty(TStr::Fmt("%s_UserProperty.txt",FileName.CStr()));
 
   Catch
   printf("\nrun time: %s (%s)\n", ExeTm.GetTmStr(), TSecTm::GetCurTm().GetTmStr().CStr());
