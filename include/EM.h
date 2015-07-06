@@ -19,33 +19,42 @@ template<typename parameter>
 class EM {
    public:
       void Optimize(EMLikelihoodFunction<parameter> &LF, Data data) {
-         iterNm = 0;
+         EMIterNm = 0;
          while(!IsTerminate()) {
+
+            sampledCascadesPositions.Clr();
+            sampledCascadesPositions.Reserve(configure.pGDConfigure.maxIterNm * configure.pGDConfigure.batchSize);
+            for (size_t j=0;j<configure.pGDConfigure.maxIterNm;j++) {
+               for (size_t i=0;i<configure.pGDConfigure.batchSize;i++) {
+                  int index = InfoPathSampler::sample(configure.pGDConfigure.sampling, configure.pGDConfigure.ParamSampling, data.cascadesPositions.Len());
+                  sampledCascadesPositions.Add(data.cascadesPositions.GetKey(index));
+               }
+            }
             Expectation(LF,data);      
             Maximization(LF,data);
             //loss = LF.Loss(data);
-            iterNm++;
-            printf("EM iteration:%d\n",(int)iterNm);
+            EMIterNm++;
+            printf("EM iteration:%d\n",(int)EMIterNm);
             fflush(stdout);
          }
       }
       bool IsTerminate() const {
-         return iterNm >= configure.maxIterNm; 
+         return EMIterNm >= configure.maxIterNm; 
       }
       void set(EMConfigure configure) {
          this->configure = configure;;
-         pgd.set(configure.pGDConfigure);
       }
 
    private:
       EMConfigure configure;
-      PGD<parameter> pgd;
-      size_t iterNm;
+      size_t iterNm, EMIterNm;
       TFlt loss;
+      TIntV sampledCascadesPositions;
 
       void Expectation(EMLikelihoodFunction<parameter> &LF, Data data) const {
-         for (THash<TInt, TCascade>::TIter CI = data.cascH.BegI(); !CI.IsEnd(); CI++) {
-            Datum datum = {data.NodeNmH, data.cascH, CI.GetKey(), data.time};
+         for (TIntV::TIter CI = sampledCascadesPositions.BegI(); CI < sampledCascadesPositions.EndI(); CI++) {
+            TInt key = data.cascH.GetKey(*CI);
+            Datum datum = {data.NodeNmH, data.cascH, key, data.time};
 
             TInt size = configure.latentVariableSize;
             THash<TInt,TFlt> jointLikelihoodTable;
@@ -53,7 +62,7 @@ class EM {
                jointLikelihoodTable.AddDat(latentVariable, LF.JointLikelihood(datum,latentVariable));
             }
 
-            THash<TInt,TFlt> &latentDistribution = LF.latentDistributions.GetDat(CI.GetKey());
+            THash<TInt,TFlt> &latentDistribution = LF.latentDistributions.GetDat(key);
             for (TInt latentVariable=0; latentVariable < size; latentVariable++) {
                TFlt likelihood = 0.0;
                for (TInt i=0; i < size; i++)
@@ -64,7 +73,34 @@ class EM {
          }
       }
       void Maximization(EMLikelihoodFunction<parameter> &LF, Data data) {
-         pgd.Optimize(LF,data);
+         iterNm = 0;
+      
+         double time = data.time;
+         THash<TInt, TCascade> &cascH = data.cascH;
+         size_t scale = configure.pGDConfigure.maxIterNm / 1;
+         size_t sampledIndex = 0;
+         TIntFltH sampledCascadesPositionsHash;
+      
+         while(iterNm < configure.pGDConfigure.maxIterNm) { 
+            parameter parameterDiff;
+            for (size_t i=0;i<configure.pGDConfigure.batchSize;i++, sampledIndex++) {
+               int position = sampledCascadesPositions[sampledIndex];
+               sampledCascadesPositionsHash.AddDat(position, 0.0);
+               Datum datum = {data.NodeNmH, cascH, cascH.GetKey(position), time};
+               parameterDiff += LF.gradient(datum);
+            }
+            parameterDiff *= (configure.pGDConfigure.learningRate/double(configure.pGDConfigure.batchSize));
+            LF.parameter.projectedlyUpdateGradient(parameterDiff);
+            iterNm++;
+            if (iterNm % scale == 0) {
+               double size = (double) sampledCascadesPositionsHash.Len();
+               Data sampleData = {data.NodeNmH, data.cascH, sampledCascadesPositionsHash, data.time};
+               loss = LF.PGDFunction<parameter>::loss(sampleData)/size;
+               printf("iterNm: %d, loss: %f\033[0K\r",(int)iterNm,loss());
+               fflush(stdout);
+            }
+         }
+         printf("\n");
          LF.maximize(); 
       }
 };

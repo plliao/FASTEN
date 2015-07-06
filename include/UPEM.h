@@ -98,21 +98,20 @@ class UPEM {
       
          double time = data.time;
          THash<TInt, TCascade> &cascH = data.cascH;
-         TIntFltH &cascadesIdx = data.cascadesPositions, sampledCascadesPositionsHash;
          size_t scale = configure.pGDConfigure.maxIterNm / 1;
          TFltV sigmaes(4); sigmaes.Add(0.0); sigmaes.Add(0.0); sigmaes.Add(0.0); sigmaes.Add(0.0);
       
          while(coorIterNm < configure.maxCoorIterNm) {
             iterNm = 0;
+            TIntFltH sampledCascadesPositionsHash;
             size_t sampledIndex = coorIterNm * configure.pGDConfigure.maxIterNm * configure.pGDConfigure.batchSize;
             while(iterNm < configure.pGDConfigure.maxIterNm) { 
                parameter parameterDiff;
-               for (size_t i=0;i<configure.pGDConfigure.batchSize;i++) {
-                  int index = sampledCascadesPositions[sampledIndex];
-                  sampledCascadesPositionsHash.AddDat(cascadesIdx.GetKey(index), 0.0);
-                  Datum datum = {data.NodeNmH, cascH, cascH.GetKey(cascadesIdx.GetKey(index)), time};
+               for (size_t i=0;i<configure.pGDConfigure.batchSize;i++, sampledIndex++) {
+                  int position = sampledCascadesPositions[sampledIndex];
+                  sampledCascadesPositionsHash.AddDat(position, 0.0);
+                  Datum datum = {data.NodeNmH, cascH, cascH.GetKey(position), time};
                   parameterDiff += LF.gradient1(datum);
-                  sampledIndex++;
                }
                parameterDiff *= (1.0/double(configure.pGDConfigure.batchSize));
                LF.calculateAverageRMSProp(configure.rmsAlpha, sigmaes, parameterDiff);
