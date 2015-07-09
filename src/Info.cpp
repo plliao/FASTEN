@@ -14,6 +14,14 @@ void Info::SaveInferred(const TStr& OutFNm) {
    InfoPathFileIO::SaveNetwork(OutFNm, InferredNetwork, nodeInfo, edgeInfo);
 }
 
+void Info::SaveInitialAlphas(const TStr& OutFNm) const {
+   TFOut FOut(OutFNm);
+   const THash<TInt,TFlt>& initialAlphas = lossFunction.getParameter().getInitialAlphas();
+   for (THash<TInt,TFlt>::TIter IAI = initialAlphas.BegI(); !IAI.IsEnd(); IAI++) {
+      FOut.PutStr(TStr::Fmt("%d;%f\n",IAI.GetKey()(),IAI.GetDat()()));
+   }
+}
+
 void Info::Init() {
    for (THash<TInt, TNodeInfo>::TIter NI = nodeInfo.NodeNmH.BegI(); NI < nodeInfo.NodeNmH.EndI(); NI++) {
       InferredNetwork.AddNode(NI.GetKey(), NI.GetDat().Name);

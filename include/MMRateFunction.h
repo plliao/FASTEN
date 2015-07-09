@@ -1,11 +1,15 @@
 #ifndef MMRATEPARAMETER_H
 #define MMRATEPARAMETER_H
 
-#include <AdditiveRiskFunction.h>
+#include <MMRateAdditiveRiskFunction.h>
 #include <EM.h>
 
 typedef struct {
-   AdditiveRiskFunctionConfigure configure;
+   TFlt Tol, InitAlpha, MaxAlpha, MinAlpha;
+   TFlt InitDiffusionPattern, MaxDiffusionPattern, MinDiffusionPattern;
+   TimeShapingFunction *shapingFunction;
+   TRegularizer Regularizer;
+   TFlt Mu;
    TInt latentVariableSize;   
 }MMRateFunctionConfigure;
 
@@ -18,15 +22,17 @@ class MMRateParameter {
       MMRateParameter& operator += (const MMRateParameter&);
       MMRateParameter& operator *= (const TFlt);
       MMRateParameter& projectedlyUpdateGradient(const MMRateParameter&);
-      void init(TInt latentVariableSize, THash<TInt,AdditiveRiskFunction>* kAlphasP);
       void set(MMRateFunctionConfigure configure);
       void reset();
-      THash<TInt,AdditiveRiskFunction>& getKAlphas() { return kAlphas;}
-      THash<TInt,TFlt>& getKPi() { return kPi;}
-   private:
+
+      TFlt Tol, InitAlpha, MaxAlpha, MinAlpha;
+      TFlt InitDiffusionPattern, MaxDiffusionPattern, MinDiffusionPattern;
+      TRegularizer Regularizer;
+      TFlt Mu;
+      TInt latentVariableSize;   
+      THash<TInt, THash<TIntPr,TFlt> > kAlphas;
+      THash<TInt,TFlt> diffusionPatterns; 
       THash<TInt,TFlt> kPi, kPi_times;
-      THash<TInt,AdditiveRiskFunction> kAlphas;
-      THash<TInt,AdditiveRiskFunction>* kAlphasP;
 };
 
 class MMRateFunction : public EMLikelihoodFunction<MMRateParameter> {
@@ -35,10 +41,9 @@ class MMRateFunction : public EMLikelihoodFunction<MMRateParameter> {
       void maximize();
       MMRateParameter& gradient(Datum datum);
       void set(MMRateFunctionConfigure configure);
-      THash<TInt,AdditiveRiskFunction>& getKAlphas() { return kAlphas;}
-      THash<TInt,TFlt>& getKPi() { return getParameter().getKPi();}
-   private:
-      THash<TInt,AdditiveRiskFunction> kAlphas;
+
+      TimeShapingFunction *shapingFunction; 
+
 };
 
 #endif

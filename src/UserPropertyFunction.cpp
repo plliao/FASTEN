@@ -45,8 +45,8 @@ TFlt UserPropertyFunction::JointLikelihood(Datum datum, TInt latentVariable) con
  
          sumInLog += alpha * shapingFunction->Value(srcTime,dstTime);
          val += alpha * shapingFunction->Integral(srcTime,dstTime);
-         //printf("datum:%d, topic:%d, sumInLog:%f, val:%f, alpha:%f, shapingVal:%f, shapingInt:%f\n", \
-                datum.index(), latentVariable(), sumInLog(),val(),alpha(),shapingFunction->Value(srcTime,dstTime)(),shapingFunction->Integral(srcTime,dstTime)()); 
+         /*printf("datum:%d, topic:%d, sumInLog:%f, val:%f, alpha:%f, shapingVal:%f, shapingInt:%f\n", \
+                datum.index(), latentVariable(), sumInLog(),val(),alpha(),shapingFunction->Value(srcTime,dstTime)(),shapingFunction->Integral(srcTime,dstTime)()); */
       }
       lossTable[i] = val;
       
@@ -64,10 +64,6 @@ TFlt UserPropertyFunction::JointLikelihood(Datum datum, TInt latentVariable) con
 }
 
 UserPropertyParameter& UserPropertyFunction::gradient(Datum datum) {
-   return parameterGrad;
-}
-
-UserPropertyParameter& UserPropertyFunction::gradient1(Datum datum) {
    double CurrentTime = datum.time;
    TCascade &Cascade = datum.cascH.GetDat(datum.index);
    THash<TInt, TNodeInfo> &NodeNmH = datum.NodeNmH;
@@ -129,7 +125,6 @@ UserPropertyParameter& UserPropertyFunction::gradient1(Datum datum) {
          if (!shapingFunction->Before(srcTime,dstTime)) break; 
             
          TFlt acquaintedValue = GetAcquaitance(srcNId, dstNId);             
-         TFlt propertyValue = GetPropertyValue(srcNId, dstNId);
          
          acquaintanceIndex.Val1 = srcNId; 
          for (TInt latentVariable=0; latentVariable<latentVariableSize; latentVariable++) {
@@ -229,250 +224,6 @@ UserPropertyParameter& UserPropertyFunction::gradient1(Datum datum) {
             if (!parameterGrad.topicReceive.IsKey(I.GetKey())) parameterGrad.topicReceive.AddDat(I.GetKey(),I.GetDat());
             else parameterGrad.topicReceive.GetDat(I.GetKey()) += I.GetDat();
             //printf("%d,%d topic receive grad:%f\n",I.GetKey().Val1(),I.GetKey().Val2(),I.GetDat()());
-         } 
-      }
-   }
-
-   for (TInt latentVariable=0; latentVariable<latentVariableSize; latentVariable++) {
-      parameterGrad.kPi.AddDat(latentVariable, latentDistributions.GetDat(datum.index).GetDat(latentVariable));
-      parameterGrad.kPi_times.AddDat(latentVariable, 1.0);
-   }
-
-   return parameterGrad;
-}
-
-UserPropertyParameter& UserPropertyFunction::gradient2(Datum datum) {
-   double CurrentTime = datum.time;
-   TCascade &Cascade = datum.cascH.GetDat(datum.index);
-   THash<TInt, TNodeInfo> &NodeNmH = datum.NodeNmH;
-
-   parameterGrad.reset();
-   
-   int nodeSize = NodeNmH.Len();
-   int cascadeSize = Cascade.Len();
-
-   #pragma omp parallel for
-   for (int i=0;i<nodeSize;i++) {
-      TInt key = NodeNmH.GetKey(i);
-      TInt dstNId = key, srcNId;
-      TFlt dstTime, srcTime;
-
-      TIntPr receiverIndex, spreaderIndex;
-      
-      bool inCascade = false;
-      if (Cascade.IsNode(dstNId) && Cascade.GetTm(dstNId) <= CurrentTime) {
-         dstTime = Cascade.GetTm(dstNId);
-         inCascade = true;
-      }
-      else dstTime = CurrentTime;
-
-      THash<TIntPr,TFlt> propertyValueVector;
-      THash<TInt,TFlt> dstAlphaVector;
-      for (THash<TInt, THitInfo>::TIter CascadeNI = Cascade.BegI(); CascadeNI < Cascade.EndI(); CascadeNI++) {
-         srcNId = CascadeNI.GetKey();
-         srcTime = CascadeNI.GetDat().Tm;
-
-         if (!shapingFunction->Before(srcTime,dstTime)) break; 
-         
-         TFlt acquaintedValue = GetAcquaitance(srcNId, dstNId);             
-         TFlt propertyValue = GetPropertyValue(srcNId, dstNId);
-
-         for (TInt latentVariable=0; latentVariable<latentVariableSize; latentVariable++) {
-            TFlt topicValue = GetTopicValue(srcNId, dstNId, latentVariable);
-            TIntPr propertyValueIndex; propertyValueIndex.Val1 = srcNId; propertyValueIndex.Val2 = latentVariable;
-            propertyValueVector.AddDat(propertyValueIndex, propertyValue + topicValue);
-
-            if (inCascade) {
-               TFlt hazard = acquaintedValue * sigmoid(propertyValueVector.GetDat(propertyValueIndex)) * shapingFunction->Value(srcTime,dstTime);
-               if (!dstAlphaVector.IsKey(latentVariable)) dstAlphaVector.AddDat(latentVariable,hazard);
-               else dstAlphaVector.GetDat(latentVariable) += hazard;
-            }
-         }
-      }
-      
-      THash<TIntPr,TFlt> spreaderPropertyGrad(cascadeSize * propertySize());
-      //THash<TIntPr,TFlt> topicSpreadGrad(cascadeSize * latentVariableSize());
-
-      for (THash<TInt, THitInfo>::TIter CascadeNI = Cascade.BegI(); CascadeNI < Cascade.EndI(); CascadeNI++) {
-         srcNId = CascadeNI.GetKey();
-         srcTime = CascadeNI.GetDat().Tm;
-
-         if (!shapingFunction->Before(srcTime,dstTime)) break; 
-         
-         TFlt acquaintedValue = GetAcquaitance(srcNId, dstNId);             
-                        
-         spreaderIndex.Val1 = srcNId; receiverIndex.Val1 = dstNId;
-         for (TInt propertyIndex=0; propertyIndex<propertySize; propertyIndex++) {
-            spreaderIndex.Val2 = receiverIndex.Val2 = propertyIndex;
-            TFlt receiverValue = parameter.propertyInitValue;
-            if (parameter.receiverProperty.IsKey(receiverIndex)) receiverValue = parameter.receiverProperty.GetDat(receiverIndex);
-
-            for (TInt latentVariable=0; latentVariable<latentVariableSize; latentVariable++) {
-               TIntPr propertyValueIndex; propertyValueIndex.Val1 = srcNId; propertyValueIndex.Val2 = latentVariable;
-               TFlt propertyValue = sigmoid(propertyValueVector.GetDat(propertyValueIndex));
-               propertyValue = propertyValue * (1.0 - propertyValue);
-               
-               TFlt grad;
-               if (inCascade) {
-                  TFlt totalAlpha = dstAlphaVector.GetDat(latentVariable);
-                  grad = shapingFunction->Integral(srcTime,dstTime) - shapingFunction->Value(srcTime,dstTime)/totalAlpha;
-               }
-               else grad = shapingFunction->Integral(srcTime,dstTime);
-               grad *= acquaintedValue * propertyValue * receiverValue * latentDistributions.GetDat(datum.index).GetDat(latentVariable)/ (TFlt)propertySize;
-            
-               if (!spreaderPropertyGrad.IsKey(spreaderIndex)) spreaderPropertyGrad.AddDat(spreaderIndex,grad);
-               else spreaderPropertyGrad.GetDat(spreaderIndex) += grad;
-            }
-
-            //printf("index:%d, %d,%d: index:%d, sValue:%f, rValue:%f, shapingVal:%f\n",datum.index(),srcNId(),dstNId(),propertyIndex(),sValue(),rValue(),shapingFunction->Integral(srcTime,dstTime)()); 
-         }
-         
-         /*spreaderIndex.Val1 = srcNId; receiverIndex.Val1 = dstNId;
-         for (TInt latentVariable=0; latentVariable<latentVariableSize; latentVariable++) {
-            spreaderIndex.Val2 = receiverIndex.Val2 = latentVariable;
-            TFlt receiverValue = parameter.topicInitValue;
-            if (parameter.topicReceive.IsKey(receiverIndex)) receiverValue = parameter.topicReceive.GetDat(receiverIndex);
-               
-            TIntPr propertyValueIndex; propertyValueIndex.Val1 = srcNId; propertyValueIndex.Val2 = latentVariable;
-            TFlt propertyValue = sigmoid(propertyValueVector.GetDat(propertyValueIndex));
-            propertyValue = MaxAlpha * propertyValue * (1.0 - propertyValue);
-               
-            TFlt grad;
-            if (inCascade) {
-               TFlt totalAlpha = dstAlphaVector.GetDat(latentVariable);
-               grad = shapingFunction->Integral(srcTime,dstTime) - shapingFunction->Value(srcTime,dstTime)/totalAlpha;
-            }
-            else grad = shapingFunction->Integral(srcTime,dstTime);
-            grad *= acquaintedValue * propertyValue * receiverValue * latentDistributions.GetDat(datum.index).GetDat(latentVariable);
-            
-            if (!topicSpreadGrad.IsKey(spreaderIndex)) topicSpreadGrad.AddDat(spreaderIndex,grad);
-            else topicSpreadGrad.GetDat(spreaderIndex) += grad;
-         }*/
-      }
-      //critical      
-      #pragma omp critical
-      {
-         for (THash<TIntPr,TFlt>::TIter I = spreaderPropertyGrad.BegI(); !I.IsEnd(); I++) {
-            if (!parameterGrad.spreaderProperty.IsKey(I.GetKey())) parameterGrad.spreaderProperty.AddDat(I.GetKey(),I.GetDat());
-            else parameterGrad.spreaderProperty.GetDat(I.GetKey()) += I.GetDat();
-            //printf("%d,%d spreader property grad:%f\n",I.GetKey().Val1(),I.GetKey().Val2(),I.GetDat()());
-         } 
-         /*for (THash<TIntPr,TFlt>::TIter I = topicSpreadGrad.BegI(); !I.IsEnd(); I++) {
-            if (!parameterGrad.topicSpread.IsKey(I.GetKey())) parameterGrad.topicSpread.AddDat(I.GetKey(),I.GetDat());
-            else parameterGrad.topicSpread.GetDat(I.GetKey()) += I.GetDat();
-         }*/
-      }
-   }
-
-   return parameterGrad;
-}
-
-UserPropertyParameter& UserPropertyFunction::gradient3(Datum datum) {
-   double CurrentTime = datum.time;
-   TCascade &Cascade = datum.cascH.GetDat(datum.index);
-   THash<TInt, TNodeInfo> &NodeNmH = datum.NodeNmH;
-
-   parameterGrad.reset();
-   
-   int nodeSize = NodeNmH.Len();
-
-   #pragma omp parallel for
-   for (int i=0;i<nodeSize;i++) {
-      TInt key = NodeNmH.GetKey(i);
-      TInt dstNId = key, srcNId;
-      TFlt propertyValue = 0.0, propertyVal = 0.0;
-      TFlt dstTime, srcTime;
-
-      TIntPr acquaintanceIndex; acquaintanceIndex.Val2 = dstNId;
-      TIntPr receiverIndex, spreaderIndex;
-      
-      bool inCascade = false;
-      if (Cascade.IsNode(dstNId) && Cascade.GetTm(dstNId) <= CurrentTime) {
-         dstTime = Cascade.GetTm(dstNId);
-         inCascade = true;
-      }
-      else dstTime = CurrentTime;
-
-      THash<TIntPr,TFlt> propertyValueVector;
-      THash<TInt,TFlt> dstAlphaVector;
-      for (THash<TInt, THitInfo>::TIter CascadeNI = Cascade.BegI(); CascadeNI < Cascade.EndI(); CascadeNI++) {
-         srcNId = CascadeNI.GetKey();
-         srcTime = CascadeNI.GetDat().Tm;
-
-         if (!shapingFunction->Before(srcTime,dstTime)) break; 
-         
-         acquaintanceIndex.Val1 = srcNId;
-         TFlt acquaintedValue = parameter.acquaintanceInitValue;               
-         if (parameter.acquaintance.IsKey(acquaintanceIndex)) acquaintedValue = parameter.acquaintance.GetDat(acquaintanceIndex);
-            
-         TFlt alpha = 0.0;
-         receiverIndex.Val1 = dstNId; spreaderIndex.Val1 = srcNId;
-         for (TInt propertyIndex=0; propertyIndex<propertySize; propertyIndex++) {
-            receiverIndex.Val2 = spreaderIndex.Val2 = propertyIndex;
-            TFlt spreaderValue = parameter.propertyInitValue, receiverValue = parameter.propertyInitValue;
-            if (parameter.spreaderProperty.IsKey(spreaderIndex)) spreaderValue = parameter.spreaderProperty.GetDat(spreaderIndex);
-            if (parameter.receiverProperty.IsKey(receiverIndex)) receiverValue = parameter.receiverProperty.GetDat(receiverIndex);
-            alpha += spreaderValue * receiverValue;
-         }
-         alpha /= (TFlt)propertySize;         
-
-         for (TInt latentVariable=0; latentVariable<latentVariableSize; latentVariable++) {
-            receiverIndex.Val2 = spreaderIndex.Val2 = latentVariable; 
-            TFlt spreaderValue = parameter.topicInitValue, receiverValue = parameter.topicInitValue;
-            if (parameter.topicSpread.IsKey(spreaderIndex)) spreaderValue = parameter.topicSpread.GetDat(spreaderIndex);
-            if (parameter.topicReceive.IsKey(receiverIndex)) receiverValue = parameter.topicReceive.GetDat(receiverIndex);
-
-            TIntPr propertyValueIndex; propertyValueIndex.Val1 = srcNId; propertyValueIndex.Val2 = latentVariable;
-            propertyValueVector.AddDat(propertyValueIndex, alpha + spreaderValue * receiverValue);
-
-            if (inCascade) {
-               //TFlt hazard = acquaintedValue * MaxAlpha * sigmoid(propertyValueVector.GetDat(propertyValueIndex)) * shapingFunction->Value(srcTime,dstTime);
-               TFlt hazard = acquaintedValue * sigmoid(propertyValueVector.GetDat(propertyValueIndex)) * shapingFunction->Value(srcTime,dstTime);
-               if (!dstAlphaVector.IsKey(latentVariable)) dstAlphaVector.AddDat(latentVariable,hazard);
-               else dstAlphaVector.GetDat(latentVariable) += hazard;
-            }
-         }
-      }
-
-      THash<TIntPr,TFlt> acquaintanceGrad;
-
-      for (THash<TInt, THitInfo>::TIter CascadeNI = Cascade.BegI(); CascadeNI < Cascade.EndI(); CascadeNI++) {
-         srcNId = CascadeNI.GetKey();
-         srcTime = CascadeNI.GetDat().Tm;
-
-         if (!shapingFunction->Before(srcTime,dstTime)) break;
-
-         acquaintanceIndex.Val1 = srcNId; 
-            
-         for (TInt latentVariable=0; latentVariable<latentVariableSize; latentVariable++) {
-            TIntPr propertyValueIndex; propertyValueIndex.Val1 = srcNId; propertyValueIndex.Val2 = latentVariable;           
-            //TFlt propertyValue = MaxAlpha * sigmoid(propertyValueVector.GetDat(propertyValueIndex)); 
-            TFlt propertyValue = sigmoid(propertyValueVector.GetDat(propertyValueIndex)); 
-            TFlt grad;
-
-            if (inCascade) {
-               TFlt topicTotalAlpha = dstAlphaVector.GetDat(latentVariable);
-               grad = shapingFunction->Integral(srcTime,dstTime) - shapingFunction->Value(srcTime,dstTime) / topicTotalAlpha;
-               //printf("%d,%d, acquaintance grad:%f, topicTotalAlpha:%f, topic:%d\n",srcNId(),dstNId(),grad(),topicTotalAlpha());
-            }
-            else
-               grad = shapingFunction->Integral(srcTime,dstTime);
-            grad *= propertyValue * latentDistributions.GetDat(datum.index).GetDat(latentVariable);
-            //printf("%d,%d, acquaintance grad:%f, topic:%d, topic probability:%f\n",srcNId(),dstNId(),grad(),latentVariable(),latentDistributions.GetDat(datum.index).GetDat(latentVariable)());
-
-            if (!acquaintanceGrad.IsKey(acquaintanceIndex)) acquaintanceGrad.AddDat(acquaintanceIndex,grad);
-            else acquaintanceGrad.GetDat(acquaintanceIndex) += grad;
-         }
-         //printf("%d,%d, acquaintance grad:%f, srcTime:%f, dstTime:%f\n",srcNId(),dstNId(),acquaintanceGrad.GetDat(acquaintanceIndex)(), srcTime(), dstTime());
-      }
-
-      //critical      
-      #pragma omp critical
-      {
-         for (THash<TIntPr,TFlt>::TIter I = acquaintanceGrad.BegI(); !I.IsEnd(); I++) {
-            if (!parameterGrad.acquaintance.IsKey(I.GetKey())) parameterGrad.acquaintance.AddDat(I.GetKey(),I.GetDat());
-            else parameterGrad.acquaintance.GetDat(I.GetKey()) += I.GetDat();
-            //printf("%d,%d acquaintance grad:%f\n",I.GetKey().Val1(),I.GetKey().Val2(),I.GetDat()());
          } 
       }
    }

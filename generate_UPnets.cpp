@@ -17,7 +17,7 @@ int main(int argc, char* argv[]) {
 
   // edge types (constant, linear, rayleigh, exponential, slab, random)
   const TStr VaryingType = Env.GetIfArgPrefixStr("-vt:", "1;0;0;0;0;0;0;0", "Varying trends percentages for tx rates\nconstant;linear;exponential;rayleigh;slab;square;chainsaw;random (default:1;0;0;0;0;0)");
-  const double ResolutionPerEdge = Env.GetIfArgPrefixFlt("-nvt:", 1.0, "Time resolution for tx rate evolution (default: 1.0)");
+  //const double ResolutionPerEdge = Env.GetIfArgPrefixFlt("-nvt:", 1.0, "Time resolution for tx rate evolution (default: 1.0)");
   const TStr VaryingTypeParameter = Env.GetIfArgPrefixStr("-dvt:", "20;1", "Period;decay for rayleigh/exponential/slab/square/chainsaw (default: 20;1)");
 
   // nodes, edges
@@ -44,7 +44,7 @@ int main(int argc, char* argv[]) {
   
   const double acquaintanceInitValue = Env.GetIfArgPrefixFlt("-iav:", 0.01, "Initial acquaintance value (default:0.01)\n");
   const double acquaintanceMinValue = Env.GetIfArgPrefixFlt("-lav:", 0.0005, "Minimum acquaintance value (default:0.0)\n");
-  const double acquaintanceMaxValue = Env.GetIfArgPrefixFlt("-uav:", 50.0, "Maximum acquaintance value (default:100)\n");
+  //const double acquaintanceMaxValue = Env.GetIfArgPrefixFlt("-uav:", 50.0, "Maximum acquaintance value (default:100)\n");
 
   // num cascades, horizon per cascade & maximum time
   const int NCascades = Env.GetIfArgPrefixInt("-c:", 1000, "Number of cascades (default:1000)\n");

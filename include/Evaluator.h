@@ -12,7 +12,7 @@ class Evaluator {
     
     void LoadGroundTruth(TSIn &SIn);
     void LoadInferredNetwork(TSIn &SIn, TStr modelName);
-    void EvaluatePRC(TFlt minAlpha, TFlt maxAlpha, const TFlt &step, TFlt PRCPointNm=100.0, bool verbol=true);
+    void EvaluatePRC(const TFlt &step, bool verbol=true);
     void EvaluateAUC(const TFlt &step);
     void EvaluateMSE(const TFlt &step);
     void PlotPRC(const TStr &Str) const;

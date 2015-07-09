@@ -92,7 +92,6 @@ MixCascadesParameter& MixCascadesParameter::operator += (const MixCascadesParame
 
 MixCascadesParameter& MixCascadesParameter::operator *= (const TFlt multiplier) {
    for(THash<TInt,AdditiveRiskFunction>::TIter AI = kAlphas.BegI(); !AI.IsEnd(); AI++) {
-      TInt key = AI.GetKey();
       AI.GetDat().getParameter() *= multiplier;
    }
    return *this;

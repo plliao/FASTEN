@@ -15,11 +15,6 @@ int main(int argc, char* argv[]) {
   const TStr modelNm  = Env.GetIfArgPrefixStr("-m:", "InfoPath", "Input model name(s)");
   const TInt k = Env.GetIfArgPrefixInt("-k:", 3, "topic size");
 
-  const double MinAlpha = Env.GetIfArgPrefixFlt("-la:", 0.0, "Min alpha (default:0.05)\n");
-  const double MaxAlpha = Env.GetIfArgPrefixFlt("-ua:", 100, "Maximum alpha (default:100)\n");
-  
-  const double PRCPointNm = Env.GetIfArgPrefixFlt("-p:", 10000, "PRC points number (default:10000)\n");
-
   TStrV InFNms, modelNms, GroundTruthNms;
   InFNm.SplitOnAllCh(':',InFNms);
   modelNm.SplitOnAllCh(':',modelNms);
@@ -48,7 +43,7 @@ int main(int argc, char* argv[]) {
 
      TVec<TFlt> steps1 = evaluators[i()].GetSteps(0);
 
-     evaluators[i()].EvaluatePRC(MinAlpha, MaxAlpha, steps1.Last(),PRCPointNm,false);
+     evaluators[i()].EvaluatePRC(steps1.Last(),false);
      evaluators[i()].EvaluateAUC(steps1.Last());
      evaluators[i()].EvaluateMSE(steps1.Last());
   }

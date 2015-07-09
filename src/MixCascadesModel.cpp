@@ -70,8 +70,8 @@ void MixCascadesModel::Infer(const TFltV& Steps, const TStr& OutFNm) {
 
          TFOut FOut(OutFNm + TStr("_") + key.GetStr() + ".txt");
 
-         for (THash<TInt, TNodeInfo>::TIter NI = nodeInfo.NodeNmH.BegI(); NI < nodeInfo.NodeNmH.EndI(); NI++) {
-            FOut.PutStr(TStr::Fmt("%d,%s\n", NI.GetKey().Val, NI.GetDat().Name.CStr()));
+         for (THash<TInt, TNodeInfo>::TIter NodeI = nodeInfo.NodeNmH.BegI(); NodeI < nodeInfo.NodeNmH.EndI(); NodeI++) {
+            FOut.PutStr(TStr::Fmt("%d,%s\n", NodeI.GetKey().Val, NodeI.GetDat().Name.CStr()));
          }
          FOut.PutStr("\n");
 
@@ -95,5 +95,5 @@ void MixCascadesModel::Infer(const TFltV& Steps, const TStr& OutFNm) {
          }
       }   
    }
-   delete mixCascadesFunctionConfigure.configure.shapingFunction;
+   delete mixCascadesFunctionConfigure.configure.shapingFunction; 
 }

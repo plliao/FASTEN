@@ -218,8 +218,6 @@ void UserPropertyModel::GenerateGroundTruth(const int& TNetwork, const int& NNod
 }
 
 void UserPropertyModel::SaveGroundTruth(TStr fileNm) {
-   UserPropertyParameter& parameter = lossFunction.getParameter();
-
    printf("ground truth\n");
    printf("prior probability:");
    THash<TInt,TFlt>& kPi = lossFunction.getParameter().kPi;
@@ -318,15 +316,11 @@ void UserPropertyModel::Infer(const TFltV& Steps, const TStr& OutFNm) {
       }
 
       int i=0;
-      int nodeSize = nodeInfo.NodeNmH.Len();
       for (THash<TInt, TNodeInfo>::TIter SI = nodeInfo.NodeNmH.BegI(); !SI.IsEnd(); SI++) {
          for (THash<TInt, TNodeInfo>::TIter DI = nodeInfo.NodeNmH.BegI(); !DI.IsEnd(); DI++,i++) {
             if (SI.GetKey()== DI.GetKey()) continue;
 
             TInt srcNId = SI.GetKey(), dstNId = DI.GetKey();
-            TFlt acquaintanceValue = lossFunction.GetAcquaitance(srcNId, dstNId);
-            TFlt propertyValue = lossFunction.GetPropertyValue(srcNId, dstNId);
-            //if (acquaintanceValue <= edgeInfo.MinAlpha) continue;
 
             //printf("%d,%d: property value:%f, acquaintance value:%f, \n", srcNId(), dstNId(), propertyValue(), acquaintanceValue());
             TFlt maxTopicValue = -DBL_MAX; TInt topic = -1;
@@ -348,8 +342,8 @@ void UserPropertyModel::Infer(const TFltV& Steps, const TStr& OutFNm) {
 
             //if (i%100000==0) printf("add edge: %d,%d , edge size: %d, edge index: %d\n", srcNId(), dstNId(), nodeSize*nodeSize,i);
             TFlt alpha = lossFunction.GetAlpha(srcNId, dstNId, topic);
-            //printf("%d,%d: alpha:%f, acquaintance value:%f, multiplier:%f, property value:%f, topic:%d, topic value:%f\n",\
-                   srcNId(), dstNId(), alpha(), acquaintanceValue(), multiplier(), propertyValue(), topic(), topicValue());
+            /*printf("%d,%d: alpha:%f, acquaintance value:%f, multiplier:%f, property value:%f, topic:%d, topic value:%f\n",\
+                   srcNId(), dstNId(), alpha(), acquaintanceValue(), multiplier(), propertyValue(), topic(), topicValue());*/
 
             if (InferredNetwork.IsEdge(srcNId, dstNId) && InferredNetwork.GetEDat(srcNId, dstNId).IsKey(Steps[t-1]) && 
                 alpha == InferredNetwork.GetEDat(srcNId, dstNId).GetDat(Steps[t-1]))

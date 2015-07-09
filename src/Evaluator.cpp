@@ -14,8 +14,7 @@ void Evaluator::LoadInferredNetwork(TSIn &SIn, TStr modelName) {
    InfoPathFileIO::LoadNetworkTxt(SIn, inferredNetwork, nodeInfo);
 }
 
-void Evaluator::EvaluatePRC(TFlt minAlpha, TFlt maxAlpha, const TFlt &step, TFlt PRCPointNm, bool verbol) {
-   TFlt groundTruthTimeStep = GetGroundTruthTimeStep(step); 
+void Evaluator::EvaluatePRC(const TFlt &step, bool verbol) {
 
    for (int i=0;i<InferredNetworks.Len();i++) {
       TFlt inferredStep = GetInferredTimeStep(step, i);
@@ -31,7 +30,6 @@ void Evaluator::EvaluatePRC(TFlt minAlpha, TFlt maxAlpha, const TFlt &step, TFlt
       TStrFltFltHNEDNet &inferredNetwork = InferredNetworks[i];
       TFlt nodeSize = (TFlt)GroundTruth.GetNodes();
       TFlt P = (TFlt)GroundTruth.GetEdges(), N = nodeSize * (nodeSize - 1.0) - P;
-      TFlt PP = (TFlt)inferredNetwork.GetEdges();
       TFlt TP = 0.0, FP = 0.0, FN = 0.0;
       THash<TIntPr,TFlt> edgesAlphaVector;
       THash<TIntPr,bool> edgesTruthTable;

@@ -14,6 +14,14 @@ void MMRateModel::SaveInferred(const TStr& OutFNm) {
    InfoPathFileIO::SaveNetwork(OutFNm, InferredNetwork, nodeInfo, edgeInfo);
 }
 
+void MMRateModel::SaveDiffusionPatterns(const TStr& OutFNm) {
+   TFOut FOut(OutFNm);
+   const THash<TInt,TFlt>& diffusionPatterns = lossFunction.getParameter().diffusionPatterns;
+   for (THash<TInt,TFlt>::TIter IAI = diffusionPatterns.BegI(); !IAI.IsEnd(); IAI++) {
+      FOut.PutStr(TStr::Fmt("%d;%f\n",IAI.GetKey()(),IAI.GetDat()()));
+   }
+}
+
 void MMRateModel::Init() {
    for (THash<TInt, TNodeInfo>::TIter NI = nodeInfo.NodeNmH.BegI(); NI < nodeInfo.NodeNmH.EndI(); NI++) {
       InferredNetwork.AddNode(NI.GetKey(), NI.GetDat().Name);
@@ -24,13 +32,13 @@ void MMRateModel::Infer(const TFltV& Steps, const TStr& OutFNm) {
   
    switch (nodeInfo.Model) {
       case POW :
-         mMRateFunctionConfigure.configure.shapingFunction = new POWShapingFunction(Delta);
+         mMRateFunctionConfigure.shapingFunction = new POWShapingFunction(Delta);
          break;
       case RAY :
-         mMRateFunctionConfigure.configure.shapingFunction = new RAYShapingFunction();
+         mMRateFunctionConfigure.shapingFunction = new RAYShapingFunction();
          break;
       default :
-         mMRateFunctionConfigure.configure.shapingFunction = new EXPShapingFunction(); 
+         mMRateFunctionConfigure.shapingFunction = new EXPShapingFunction(); 
    } 
    lossFunction.set(mMRateFunctionConfigure);
    em.set(eMConfigure);
@@ -54,24 +62,23 @@ void MMRateModel::Infer(const TFltV& Steps, const TStr& OutFNm) {
       Data data = {nodeInfo.NodeNmH, CascH, CascadesPositions, Steps[t]};
       em.Optimize(lossFunction, data);
 
-      const THash<TInt,AdditiveRiskFunction>& kAlphas = lossFunction.getKAlphas();
-      const THash<TInt,TFlt>& kPi = lossFunction.getKPi();
+      const THash<TInt, THash<TIntPr, TFlt> >& kAlphas = lossFunction.getParameter().kAlphas;
+      const THash<TInt,TFlt>& kPi = lossFunction.getParameter().kPi;
 
       printf("MMRate prior probability\n");
       for (THash<TInt,TFlt>::TIter piI = kPi.BegI(); !piI.IsEnd(); piI++) printf("topic %d probability: %f, ", piI.GetKey()(), piI.GetDat()());
       printf("\n");
          
 
-      for (THash<TInt,AdditiveRiskFunction>::TIter NI = kAlphas.BegI(); !NI.IsEnd(); NI++) {
+      for (THash<TInt, THash<TIntPr, TFlt> >::TIter NI = kAlphas.BegI(); !NI.IsEnd(); NI++) {
          TInt key = NI.GetKey();
-         const TFlt multiplier = NI.GetDat().getParameter().getMultiplier();
-         const THash<TIntPr, TFlt>& alphas = NI.GetDat().getParameter().getAlphas();
+         const THash<TIntPr, TFlt>& alphas = NI.GetDat();
          TStrFltFltHNEDNet& inferredNetwork = InferredNetwork;
 
          TFOut FOut(OutFNm + TStr("_") + key.GetStr() + ".txt");
 
-         for (THash<TInt, TNodeInfo>::TIter NI = nodeInfo.NodeNmH.BegI(); NI < nodeInfo.NodeNmH.EndI(); NI++) {
-            FOut.PutStr(TStr::Fmt("%d,%s\n", NI.GetKey().Val, NI.GetDat().Name.CStr()));
+         for (THash<TInt, TNodeInfo>::TIter NodeI = nodeInfo.NodeNmH.BegI(); NodeI < nodeInfo.NodeNmH.EndI(); NodeI++) {
+            FOut.PutStr(TStr::Fmt("%d,%s\n", NodeI.GetKey().Val, NodeI.GetDat().Name.CStr()));
          }
          FOut.PutStr("\n");
 
@@ -80,12 +87,12 @@ void MMRateModel::Infer(const TFltV& Steps, const TStr& OutFNm) {
             if (i%100000==0) printf("add kAlphas: %d, alphas length: %d, alpha index: %d\n", NI.GetKey()(),alphas.Len(),i);
             TInt srcNId = AI.GetKey().Val1, dstNId = AI.GetKey().Val2;
  
-            TFlt alpha = AI.GetDat() * multiplier;
+            TFlt alpha = AI.GetDat();
             if (inferredNetwork.IsEdge(srcNId, dstNId) && inferredNetwork.GetEDat(srcNId, dstNId).IsKey(Steps[t-1]) && 
                 alpha == inferredNetwork.GetEDat(srcNId, dstNId).GetDat(Steps[t-1]))
                alpha = alpha * Aging;
             
-            if (alpha <= mMRateFunctionConfigure.configure.MinAlpha) continue;
+            if (alpha <= mMRateFunctionConfigure.MinAlpha) continue;
             if (!inferredNetwork.IsEdge(srcNId, dstNId)) inferredNetwork.AddEdge(srcNId, dstNId, TFltFltH());
  
             FOut.PutStr(TStr::Fmt("%d,%d,%f,%f\n", srcNId, dstNId, Steps[t], alpha));
@@ -95,5 +102,5 @@ void MMRateModel::Infer(const TFltV& Steps, const TStr& OutFNm) {
          }
       }   
    }
-   delete mMRateFunctionConfigure.configure.shapingFunction;
+   delete mMRateFunctionConfigure.shapingFunction;
 }

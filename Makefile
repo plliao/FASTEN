@@ -15,6 +15,7 @@ HDRDIR = include
 OBJDIR = obj
 SNAPLIBDIRS = $(GLIB) $(SNAP) $(SNAPADV) $(SNAPEXP)
 INCLUDEDIRS = $(HDRDIR) $(SNAPLIBDIRS)
+#LINKOBJS = $(SNAP)/Snap.o $(SNAPADV)/cascdynetinf.o $(SNAPADV)/kronecker.o
 LINKOBJS = $(LIBDIR)/Snap.o $(LIBDIR)/cascdynetinf.o $(LIBDIR)/kronecker.o
 
 CC = g++
@@ -49,7 +50,7 @@ $(PROGRAM): $(MAINFILE) $(OBJS) $(LINKOBJS)
 	@$(CC) $(CFLAGS) $< $(OBJS) $(LINKOBJS) -lrt -o $@
 
 $(OBJDIR)/%.o: $(SRCDIR)/%$(SRCEXTS) $(HDRDIR)/%$(HDREXTS)
-	@$(CC) $(CFLAGS) -c $< $(LINKOBJS) -lrt -o $@
+	@$(CC) $(CFLAGS) -c $< -lrt -o $@
 
 $(BINDIR)/%: %$(SRCEXTS) $(OBJS) $(LINKOBJS)
 	@$(CC) $(CFLAGS) $< $(OBJS) $(LINKOBJS) -lrt -o $@

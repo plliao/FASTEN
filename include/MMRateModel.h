@@ -26,6 +26,7 @@ class MMRateModel {
       void LoadCascadesTxt(const TStr& InFNm);
       void LoadGroundTruthTxt(const TStr& InFNm);
       void SaveInferred(const TStr& OutFNm);
+      void SaveDiffusionPatterns(const TStr& OutFNm);
 
       void SetLatentVariableSize(const TInt size) { mMRateFunctionConfigure.latentVariableSize = eMConfigure.latentVariableSize = size;}
       void SetModel(const TModel& model) { nodeInfo.Model = model; }
@@ -40,12 +41,15 @@ class MMRateModel {
       void SetEMMaxIterNm(const size_t maxIterNm) { eMConfigure.maxIterNm = maxIterNm;}
 
       void SetAging(const double& aging) { Aging = aging; }
-      void SetRegularizer(const TRegularizer& reg) { mMRateFunctionConfigure.configure.Regularizer = reg; }
-      void SetMu(const double& mu) { mMRateFunctionConfigure.configure.Mu = mu; }
-      void SetTolerance(const double& tol) { mMRateFunctionConfigure.configure.Tol = tol; }
-      void SetMaxAlpha(const double& ma) { mMRateFunctionConfigure.configure.MaxAlpha = edgeInfo.MaxAlpha = ma; }
-      void SetMinAlpha(const double& ma) { mMRateFunctionConfigure.configure.MinAlpha = edgeInfo.MinAlpha = ma; }
-      void SetInitAlpha(const double& ia) { mMRateFunctionConfigure.configure.InitAlpha = ia; }
+      void SetRegularizer(const TRegularizer& reg) { mMRateFunctionConfigure.Regularizer = reg; }
+      void SetMu(const double& mu) { mMRateFunctionConfigure.Mu = mu; }
+      void SetTolerance(const double& tol) { mMRateFunctionConfigure.Tol = tol; }
+      void SetMaxAlpha(const double& ma) { mMRateFunctionConfigure.MaxAlpha = edgeInfo.MaxAlpha = ma; }
+      void SetMinAlpha(const double& ma) { mMRateFunctionConfigure.MinAlpha = edgeInfo.MinAlpha = ma; }
+      void SetInitAlpha(const double& ia) { mMRateFunctionConfigure.InitAlpha = ia; }
+      void SetMaxDiffusionPattern(const double& md) { mMRateFunctionConfigure.MaxDiffusionPattern = md; }
+      void SetMinDiffusionPattern(const double& md) { mMRateFunctionConfigure.MinDiffusionPattern = md; }
+      void SetInitDiffusionPattern(const double& id) { mMRateFunctionConfigure.InitDiffusionPattern = id; }
 
       void Init();
       int GetCascs() { return CascH.Len(); }

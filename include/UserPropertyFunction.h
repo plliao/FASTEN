@@ -57,9 +57,6 @@ class UserPropertyFunction : public UPEMLikelihoodFunction<UserPropertyParameter
       void set(UserPropertyFunctionConfigure configure);
       TFlt JointLikelihood(Datum datum, TInt latentVariable) const;
       void maximize();
-      UserPropertyParameter& gradient1(Datum datum);
-      UserPropertyParameter& gradient2(Datum datum);
-      UserPropertyParameter& gradient3(Datum datum);
       UserPropertyParameter& gradient(Datum datum);
       void calculateRProp(TFlt, UserPropertyParameter&, UserPropertyParameter&);
       void calculateRMSProp(TFlt, UserPropertyParameter&, UserPropertyParameter&);

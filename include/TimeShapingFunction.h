@@ -5,6 +5,7 @@
 
 class TimeShapingFunction {
    public:
+      virtual ~TimeShapingFunction() {};
       virtual TFlt Value(TFlt srcTime,TFlt dstTime) const = 0;
       virtual TFlt Integral(TFlt srcTime,TFlt dstTime) const = 0;
       virtual bool Before(TFlt srcTime,TFlt dstTime) const = 0;

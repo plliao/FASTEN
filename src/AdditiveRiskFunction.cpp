@@ -17,8 +17,10 @@ AdditiveRiskParameter& AdditiveRiskFunction::gradient(Datum datum) {
    int *srcNIds = new int[nodeSize * cascadeSize];
    int *dstNIds = new int[nodeSize * cascadeSize];
    float *vals  = new float[nodeSize * cascadeSize];
+   //float *initialVals = new float[nodeSize];
  
    for (int i=0;i<nodeSize;i++) {
+      //initialVals[i] = 0.0;
       for (int j=0;j<cascadeSize;j++) {
          int index = i*cascadeSize + j;
          srcNIds[index] = dstNIds[index] = -1;
@@ -33,6 +35,11 @@ AdditiveRiskParameter& AdditiveRiskFunction::gradient(Datum datum) {
       TInt dstNId = NI.GetKey(), srcNId;
       TFlt sumInLog = 0.0, val = 0.0;
       TFlt dstTime, srcTime;
+
+      /*//self infected
+      TFlt selfAlpha;
+      if (parameter.initialAlphas.IsKey(dstNId)) selfAlpha = parameter.initialAlphas.GetDat(dstNId);
+      else selfAlpha = parameter.InitAlpha;*/
 
       if (Cascade.IsNode(dstNId) && Cascade.GetTm(dstNId) <= CurrentTime) {
          dstTime = Cascade.GetTm(dstNId);
@@ -53,6 +60,14 @@ AdditiveRiskParameter& AdditiveRiskFunction::gradient(Datum datum) {
          }
       }
       else dstTime = CurrentTime;
+
+      /*//self infected
+      sumInLog += selfAlpha;
+      if (Cascade.IsNode(dstNId) && Cascade.GetTm(dstNId) <= CurrentTime)
+         val = dstTime - startTime - 1.0/sumInLog;
+      else
+         val = dstTime - startTime;
+      initialVals[i] = val();*/
 
       int j=0;
       for (THash<TInt, THitInfo>::TIter CascadeNI = Cascade.BegI(); CascadeNI < Cascade.EndI(); CascadeNI++,j++) {
@@ -76,6 +91,8 @@ AdditiveRiskParameter& AdditiveRiskFunction::gradient(Datum datum) {
    }
 
    for (int i=0;i<nodeSize;i++) {
+      //TInt key = NodeNmH.GetKey(i);
+      //parameterGrad.initialAlphas.AddDat(key, initialVals[i]);
       for (int j=0;j<cascadeSize;j++) {
          int index = i*cascadeSize + j;
          if (srcNIds[index]==-1) break;
@@ -87,6 +104,7 @@ AdditiveRiskParameter& AdditiveRiskFunction::gradient(Datum datum) {
    delete[] srcNIds;
    delete[] dstNIds;
    delete[] vals;
+   //delete[] initialVals;
 
    return parameterGrad;
 }
@@ -107,6 +125,11 @@ TFlt AdditiveRiskFunction::loss(Datum datum) const {
       TFlt sumInLog = 0.0, val = 0.0;
       TFlt dstTime, srcTime;
 
+      /*//self infected
+      TFlt selfAlpha;
+      if (parameter.initialAlphas.IsKey(dstNId)) selfAlpha = parameter.initialAlphas.GetDat(dstNId);
+      else selfAlpha = parameter.InitAlpha;*/
+
       if (Cascade.IsNode(dstNId) && Cascade.GetTm(dstNId) <= CurrentTime) dstTime = Cascade.GetTm(dstNId);
       else dstTime = CurrentTime;
 
@@ -126,6 +149,9 @@ TFlt AdditiveRiskFunction::loss(Datum datum) const {
          val += alpha * shapingFunction->Integral(srcTime,dstTime);
          //printf("sumInLog:%f,val:%f, alpha:%f, shapingVal:%f, shapingInt:%f\n",sumInLog(),val(),alpha(),shapingFunction->Value(srcTime,dstTime)(),shapingFunction->Integral(srcTime,dstTime)()); 
       }
+      //self infected
+      //sumInLog += selfAlpha;
+      //val += selfAlpha * (dstTime - startTime);
       lossTable[i] = val;
       
       if (Cascade.IsNode(dstNId) && Cascade.GetTm(dstNId) <= CurrentTime && sumInLog!=0.0) lossTable[i] -= TMath::Log(sumInLog);
@@ -147,6 +173,8 @@ AdditiveRiskParameter& AdditiveRiskParameter::operator = (const AdditiveRiskPara
    multiplier = p.multiplier;
    alphas.Clr();
    alphas = p.alphas;
+   //initialAlphas.Clr();
+   //initialAlphas = p.initialAlphas;
    return *this; 
 }
 
@@ -158,6 +186,12 @@ AdditiveRiskParameter& AdditiveRiskParameter::operator += (const AdditiveRiskPar
       else alphas.GetDat(key) += alpha/multiplier;
       //printf("%d,%d: += alpha:%f, m:%f\n", AI.GetDat()key.Val1(), key.Val2(), AI.GetDat(), p.multiplier());
    }
+   /*for (THash<TInt,TFlt>::TIter IAI = p.initialAlphas.BegI(); !IAI.IsEnd(); IAI++) {
+      TInt key = IAI.GetKey();
+      TFlt initialAlpha = IAI.GetDat() * p.multiplier;
+      if (!initialAlphas.IsKey(key)) initialAlphas.AddDat(key, initialAlpha/multiplier);
+      else initialAlphas.GetDat(key) += initialAlpha/multiplier;
+   }*/
    return *this; 
 }
 
@@ -182,12 +216,30 @@ AdditiveRiskParameter& AdditiveRiskParameter::projectedlyUpdateGradient(const Ad
       if (!alphas.IsKey(key)) alphas.AddDat(key,alpha/multiplier);
       else alphas.GetDat(key) = alpha/multiplier;
    }
+
+   /*for (THash<TInt,TFlt>::TIter IAI = p.initialAlphas.BegI(); !IAI.IsEnd(); IAI++) {
+      TInt key = IAI.GetKey();
+      TFlt initialAlphaGradient = IAI.GetDat() * p.multiplier, initialAlpha;
+      //printf("%d,%d: %f, dat:%f, m:%f\n",key.Val1(),key.Val2(),alpha(),IAI.GetDat()(),p.multiplier());
+      if (initialAlphas.IsKey(key)) initialAlpha = initialAlphas.GetDat(key) * multiplier; 
+      else initialAlpha = InitAlpha;
+
+      initialAlpha -= (initialAlphaGradient + (Regularizer ? Mu : TFlt(0.0)) * initialAlpha);
+
+      if (initialAlpha < Tol) initialAlpha = Tol;
+      if (initialAlpha > MaxAlpha) initialAlpha = MaxAlpha;
+
+      if (!initialAlphas.IsKey(key)) initialAlphas.AddDat(key,initialAlpha/multiplier);
+      else initialAlphas.GetDat(key) = initialAlpha/multiplier;
+   }*/
+
    return *this; 
 }
 
 void AdditiveRiskParameter::reset() {
    multiplier = 1.0;
    alphas.Clr();
+   //initialAlphas.Clr();
    Tol = InitAlpha = MaxAlpha = MinAlpha = 0.0;
 }
 
@@ -203,6 +255,10 @@ void AdditiveRiskParameter::set(AdditiveRiskFunctionConfigure configure) {
 
 const THash<TIntPr, TFlt>& AdditiveRiskParameter::getAlphas() const {
    return alphas;
+}
+
+const THash<TInt, TFlt>& AdditiveRiskParameter::getInitialAlphas() const {
+   return initialAlphas;
 }
 
 const TFlt AdditiveRiskParameter::getMultiplier() const {

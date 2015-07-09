@@ -111,7 +111,7 @@ class UPEM {
                   int position = sampledCascadesPositions[sampledIndex];
                   sampledCascadesPositionsHash.AddDat(position, 0.0);
                   Datum datum = {data.NodeNmH, cascH, cascH.GetKey(position), time};
-                  parameterDiff += LF.gradient1(datum);
+                  parameterDiff += LF.gradient(datum);
                }
                parameterDiff *= (1.0/double(configure.pGDConfigure.batchSize));
                LF.calculateAverageRMSProp(configure.rmsAlpha, sigmaes, parameterDiff);
@@ -142,9 +142,6 @@ class UPEMLikelihoodFunction : public PGDFunction<parameter> {
    public:
       virtual TFlt JointLikelihood(Datum datum, TInt latentVariable) const = 0;
       virtual void maximize() = 0;
-      virtual parameter& gradient1(Datum datum) = 0;
-      virtual parameter& gradient2(Datum datum) = 0;
-      virtual parameter& gradient3(Datum datum) = 0;
       virtual void calculateRProp(TFlt, parameter&, parameter&) = 0;
       virtual void calculateRMSProp(TFlt, parameter&, parameter&) = 0;
       virtual void calculateAverageRMSProp(TFlt, TFltV&, parameter&) = 0;
