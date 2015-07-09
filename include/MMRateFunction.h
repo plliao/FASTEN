@@ -1,8 +1,8 @@
 #ifndef MMRATEPARAMETER_H
 #define MMRATEPARAMETER_H
 
-#include <MMRateAdditiveRiskFunction.h>
 #include <EM.h>
+#include <TimeShapingFunction.h>
 
 typedef struct {
    TFlt Tol, InitAlpha, MaxAlpha, MinAlpha;
