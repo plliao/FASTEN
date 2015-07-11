@@ -51,7 +51,7 @@ TFlt UserPropertyFunction::JointLikelihood(Datum datum, TInt latentVariable) con
       lossTable[i] = val;
       
       if (Cascade.IsNode(dstNId) && Cascade.GetTm(dstNId) <= CurrentTime && sumInLog != 0.0) lossTable[i] -= TMath::Log(sumInLog);
-      if (lossTable[i] < -10.0) lossTable[i] = -10.0;   
+      //if (lossTable[i] < -10.0) lossTable[i] = -10.0;   
    }
 
    for (int i=0;i<nodeSize;i++) totalLoss += lossTable[i];

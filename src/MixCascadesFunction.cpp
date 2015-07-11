@@ -38,8 +38,9 @@ void MixCascadesFunction::set(MixCascadesFunctionConfigure configure) {
 
 void MixCascadesParameter::init(TInt latentVariableSize, THash<TInt,AdditiveRiskFunction>* KAlphasP) {
    kAlphasP = KAlphasP;
+   TRnd rnd; rnd.PutSeed(time(NULL));
    for (TInt i=0;i<latentVariableSize;i++) {
-      kPi.AddDat(i,TFlt::GetRnd());
+      kPi.AddDat(i, rnd.GetUniDevInt(1,2));
       kPi_times.AddDat(i,0.0);
    }
    TFlt sum = 0.0;

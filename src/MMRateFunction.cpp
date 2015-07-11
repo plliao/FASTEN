@@ -185,9 +185,10 @@ void MMRateParameter::set(MMRateFunctionConfigure configure) {
    MinDiffusionPattern = configure.MinDiffusionPattern;
    latentVariableSize = configure.latentVariableSize;
 
+   TRnd rnd; rnd.PutSeed(time(NULL));
    for (TInt i=0;i<latentVariableSize;i++) {
       kAlphas.AddDat(i, THash<TIntPr, TFlt>());
-      kPi.AddDat(i,TFlt::GetRnd());
+      kPi.AddDat(i,rnd.GetUniDevInt(1,2));
       kPi_times.AddDat(i,0.0);
    }
    TFlt sum = 0.0;
