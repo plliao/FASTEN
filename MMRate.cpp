@@ -48,9 +48,9 @@ int main(int argc, char* argv[]) {
   const double MaxAlpha = Env.GetIfArgPrefixFlt("-ua:", 100, "Maximum alpha (default:100)\n");
   const double InitAlpha = Env.GetIfArgPrefixFlt("-ia:", 0.01, "Initial alpha (default:0.01)\n");
 
-  const double MinDiffusionPattern = Env.GetIfArgPrefixFlt("-la:", 0.0001, "Min diffusion pattern (default:0.0001)\n");
-  const double MaxDiffusionPattern = Env.GetIfArgPrefixFlt("-ua:", 2.0, "Maximum diffusion pattern (default:2.0)\n");
-  const double InitDiffusionPattern = Env.GetIfArgPrefixFlt("-ia:", 0.01, "Initial diffusion pattern (default:0.01)\n");
+  const double MinDiffusionPattern = Env.GetIfArgPrefixFlt("-ld:", 0.0001, "Min diffusion pattern (default:0.0001)\n");
+  const double MaxDiffusionPattern = Env.GetIfArgPrefixFlt("-ud:", 2.0, "Maximum diffusion pattern (default:2.0)\n");
+  const double InitDiffusionPattern = Env.GetIfArgPrefixFlt("-id:", 0.01, "Initial diffusion pattern (default:0.01)\n");
 
   //const int SaveOnlyEdges = Env.GetIfArgPrefixInt("-oe:", 0, "Save only edges, not nodes\n:0:edges and nodes, 1:only edges (default:0)\n");
 
