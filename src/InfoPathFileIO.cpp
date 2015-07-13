@@ -6,9 +6,10 @@ void InfoPathFileIO::LoadNodes(TSIn& SIn, NodeInfo &nodeInfo, bool verbose) {
     SIn.GetNextLn(Line);
     if (Line=="") { break; }
 
-    TStrV NIdV; Line.SplitOnAllCh(',', NIdV);
-    const int NId = NIdV[0].GetInt();
-    const TStr domainName = NIdV[1];
+    TStr NIdStr, nameStr; 
+    Line.SplitOnCh(NIdStr, ',', nameStr);
+    const int NId = NIdStr.GetInt();
+    const TStr domainName = nameStr;
 
     if (!IsNodeNm(NId, nodeInfo)) AddNodeNm(NId, TNodeInfo(domainName, 0), nodeInfo);
     else IAssert(domainName == nodeInfo.NodeNmH.GetDat(NId).Name); 
@@ -27,9 +28,10 @@ void InfoPathFileIO::LoadAndAddNodes(TSIn& SIn, TStrFltFltHNEDNet& Network, Node
     SIn.GetNextLn(Line);
     if (Line=="") { break; }
 
-    TStrV NIdV; Line.SplitOnAllCh(',', NIdV);
-    const int NId = NIdV[0].GetInt();
-    const TStr domainName = NIdV[1];
+    TStr NIdStr, nameStr; 
+    Line.SplitOnCh(NIdStr, ',', nameStr);
+    const int NId = NIdStr.GetInt();
+    const TStr domainName = nameStr;
 
     if (!IsNodeNm(NId, nodeInfo)) {
        AddNodeNm(NId, TNodeInfo(domainName, 0), nodeInfo);
