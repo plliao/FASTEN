@@ -31,6 +31,7 @@ class MMRateModel {
       void SetLatentVariableSize(const TInt size) { mMRateFunctionConfigure.latentVariableSize = eMConfigure.latentVariableSize = size;}
       void SetModel(const TModel& model) { nodeInfo.Model = model; }
       void SetWindow(const double& window) { Window = window; }
+      void SetObservedWindow(const double& window) { lossFunction.observedWindow = window; }
       void SetDelta(const double& delta) { Delta = delta; }
 
       void SetLearningRate(const double& lr) { eMConfigure.pGDConfigure.learningRate = lr; }

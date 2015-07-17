@@ -81,6 +81,17 @@ class EM {
          size_t sampledIndex = 0;
          TIntFltH sampledCascadesPositionsHash;
       
+         size_t size = sampledCascadesPositions.Len();
+         for (size_t i=0; i<size; i++) {
+            int position = sampledCascadesPositions[i];
+            sampledCascadesPositionsHash.AddDat(position, 0.0);
+         }
+         Data sampleData = {data.NodeNmH, data.cascH, sampledCascadesPositionsHash, data.time};
+         loss = LF.PGDFunction<parameter>::loss(sampleData)/(double)size;
+         printf("iterNm: %d, loss: %f -> ",(int)iterNm,loss());
+         fflush(stdout);
+         sampledCascadesPositionsHash.Clr();
+
          while(iterNm < configure.pGDConfigure.maxIterNm) { 
             parameter parameterDiff;
             for (size_t i=0;i<configure.pGDConfigure.batchSize;i++, sampledIndex++) {

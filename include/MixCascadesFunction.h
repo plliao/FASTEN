@@ -6,7 +6,8 @@
 
 typedef struct {
    AdditiveRiskFunctionConfigure configure;
-   TInt latentVariableSize;   
+   TInt latentVariableSize;  
+   TFlt observedWindow; 
 }MixCascadesFunctionConfigure;
 
 class MixCascadesFunction;

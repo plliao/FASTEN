@@ -20,7 +20,7 @@ TFlt MMRateFunction::JointLikelihood(Datum datum, TInt latentVariable) const {
       TFlt dstTime, srcTime;
 
       if (Cascade.IsNode(dstNId) && Cascade.GetTm(dstNId) <= CurrentTime) dstTime = Cascade.GetTm(dstNId);
-      else dstTime = CurrentTime;
+      else dstTime = Cascade.GetMaxTm() + observedWindow;
 
       for (THash<TInt, THitInfo>::TIter CascadeNI = Cascade.BegI(); CascadeNI < Cascade.EndI(); CascadeNI++) {
          srcNId = CascadeNI.GetKey();
@@ -111,7 +111,7 @@ MMRateParameter& MMRateFunction::gradient(Datum datum) {
                //printf("sumInLog:%f, alpha:%f, val:%f, initAlpha:%f\n",sumInLog(),alpha(),shapingFunction->Value(srcTime,dstTime)(),parameter.InitAlpha());
             }
          }
-         else dstTime = CurrentTime;
+         else dstTime = Cascade.GetMaxTm() + observedWindow;
    
          int j=0;
          for (THash<TInt, THitInfo>::TIter CascadeNI = Cascade.BegI(); CascadeNI < Cascade.EndI(); CascadeNI++,j++) {
@@ -188,7 +188,7 @@ void MMRateParameter::set(MMRateFunctionConfigure configure) {
    TRnd rnd; rnd.PutSeed(time(NULL));
    for (TInt i=0;i<latentVariableSize;i++) {
       kAlphas.AddDat(i, THash<TIntPr, TFlt>());
-      kPi.AddDat(i,rnd.GetUniDevInt(1,2));
+      kPi.AddDat(i,rnd.GetUniDev() * 1.0 + 1.0);
       kPi_times.AddDat(i,0.0);
    }
    TFlt sum = 0.0;

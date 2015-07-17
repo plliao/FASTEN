@@ -59,7 +59,7 @@ AdditiveRiskParameter& AdditiveRiskFunction::gradient(Datum datum) {
             //printf("sumInLog:%f, alpha:%f, val:%f, initAlpha:%f\n",sumInLog(),alpha(),shapingFunction->Value(srcTime,dstTime)(),parameter.InitAlpha());
          }
       }
-      else dstTime = CurrentTime;
+      else dstTime = Cascade.GetMaxTm() + observedWindow; 
 
       /*//self infected
       sumInLog += selfAlpha;
@@ -79,8 +79,9 @@ AdditiveRiskParameter& AdditiveRiskFunction::gradient(Datum datum) {
          TIntPr alphaIndex; alphaIndex.Val1 = srcNId; alphaIndex.Val2 = dstNId;
          if (Cascade.IsNode(dstNId) && Cascade.GetTm(dstNId) <= CurrentTime)
             val = shapingFunction->Integral(srcTime,dstTime) - shapingFunction->Value(srcTime,dstTime)/sumInLog;
-         else
+         else {
             val = shapingFunction->Integral(srcTime,dstTime);
+         }
             
          int index = i*cascadeSize + j;
          srcNIds[index] = srcNId();
@@ -131,7 +132,7 @@ TFlt AdditiveRiskFunction::loss(Datum datum) const {
       else selfAlpha = parameter.InitAlpha;*/
 
       if (Cascade.IsNode(dstNId) && Cascade.GetTm(dstNId) <= CurrentTime) dstTime = Cascade.GetTm(dstNId);
-      else dstTime = CurrentTime;
+      else dstTime = Cascade.GetMaxTm() + observedWindow; 
 
       for (THash<TInt, THitInfo>::TIter CascadeNI = Cascade.BegI(); CascadeNI < Cascade.EndI(); CascadeNI++) {
          srcNId = CascadeNI.GetKey();

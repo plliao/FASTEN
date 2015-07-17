@@ -29,6 +29,7 @@ int main(int argc, char* argv[]) {
   const int CascadesTimeFormat = Env.GetIfArgPrefixInt("-ctf:", 0, "Cascades time format\n0:no time units,1:second,2:minute,3:hour,4:6 hours,5:12 hours, 6:day\n");
 
   double Window = Env.GetIfArgPrefixFlt("-h:", -1, "Time window per cascade (if any), -1 means the window is set by  means last infection time (default:-1)\n");
+  double observedWindow = Env.GetIfArgPrefixFlt("-w:", 10.0, "Observed time window (default 10.0)\n");
 
   const TStr NodeIdx = Env.GetIfArgPrefixStr("-ni:", "-1", "Node indeces to estimate incoming tx rates (-1:all nodes, -X:random -X-node subset)");
 
@@ -50,7 +51,7 @@ int main(int argc, char* argv[]) {
 
   const double MinDiffusionPattern = Env.GetIfArgPrefixFlt("-ld:", 0.0001, "Min diffusion pattern (default:0.0001)\n");
   const double MaxDiffusionPattern = Env.GetIfArgPrefixFlt("-ud:", 2.0, "Maximum diffusion pattern (default:2.0)\n");
-  const double InitDiffusionPattern = Env.GetIfArgPrefixFlt("-id:", 0.01, "Initial diffusion pattern (default:0.01)\n");
+  const double InitDiffusionPattern = Env.GetIfArgPrefixFlt("-id:", 0.05, "Initial diffusion pattern (default:0.01)\n");
 
   //const int SaveOnlyEdges = Env.GetIfArgPrefixInt("-oe:", 0, "Save only edges, not nodes\n:0:edges and nodes, 1:only edges (default:0)\n");
 
@@ -80,6 +81,7 @@ int main(int argc, char* argv[]) {
   mMRate.SetRegularizer(Regularizer);
   mMRate.SetMu(Mu);
   mMRate.SetWindow(Window);
+  mMRate.SetObservedWindow(observedWindow);
   mMRate.SetAging(Aging);
 
   // load cascades from file

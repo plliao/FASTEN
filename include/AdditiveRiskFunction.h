@@ -42,7 +42,8 @@ class AdditiveRiskFunction : public PGDFunction<AdditiveRiskParameter> {
       AdditiveRiskParameter& gradient(Datum datum); 
       TFlt loss(Datum datum) const;
       
-      TimeShapingFunction *shapingFunction; 
+      TimeShapingFunction *shapingFunction;
+      TFlt observedWindow; 
 };
 
 #endif 

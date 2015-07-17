@@ -26,6 +26,7 @@ int main(int argc, char* argv[]) {
   const int CascadesTimeFormat = Env.GetIfArgPrefixInt("-ctf:", 0, "Cascades time format\n0:no time units,1:second,2:minute,3:hour,4:6 hours,5:12 hours, 6:day\n");
 
   double Window = Env.GetIfArgPrefixFlt("-h:", -1, "Time window per cascade (if any), -1 means the window is set by  means last infection time (default:-1)\n");
+  double observedWindow = Env.GetIfArgPrefixFlt("-w:", 10.0, "Observed window time default(10.0)\n");
 
   const TStr NodeIdx = Env.GetIfArgPrefixStr("-ni:", "-1", "Node indeces to estimate incoming tx rates (-1:all nodes, -X:random -X-node subset)");
 
@@ -62,6 +63,7 @@ int main(int argc, char* argv[]) {
   info.SetRegularizer(Regularizer);
   info.SetMu(Mu);
   info.SetWindow(Window);
+  info.SetObservedWindow(observedWindow);
   info.SetAging(Aging);
 
   // load cascades from file

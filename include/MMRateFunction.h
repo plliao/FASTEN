@@ -43,7 +43,7 @@ class MMRateFunction : public EMLikelihoodFunction<MMRateParameter> {
       void set(MMRateFunctionConfigure configure);
 
       TimeShapingFunction *shapingFunction; 
-
+      TFlt observedWindow;
 };
 
 #endif
