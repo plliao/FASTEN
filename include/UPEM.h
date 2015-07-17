@@ -41,6 +41,8 @@ class UPEM {
 
             Expectation(LF,data);      
             Maximization(LF,data);
+            //if (emIterNm!=0) LF.updateAcquaintance();
+            LF.updateAcquaintance();
             emIterNm++;
 
             THash<TInt,TFlt> kPi = LF.getPriorTHash();
@@ -99,7 +101,8 @@ class UPEM {
          double time = data.time;
          THash<TInt, TCascade> &cascH = data.cascH;
          size_t scale = configure.pGDConfigure.maxIterNm / 1;
-         TFltV sigmaes(4); sigmaes.Add(0.0); sigmaes.Add(0.0); sigmaes.Add(0.0); sigmaes.Add(0.0);
+         //TFltV sigmaes(4); sigmaes.Add(0.0); sigmaes.Add(0.0); sigmaes.Add(0.0); sigmaes.Add(0.0);
+         parameter learningRates;
       
          while(coorIterNm < configure.maxCoorIterNm) {
             iterNm = 0;
@@ -114,7 +117,8 @@ class UPEM {
                   parameterDiff += LF.gradient(datum);
                }
                parameterDiff *= (1.0/double(configure.pGDConfigure.batchSize));
-               LF.calculateAverageRMSProp(configure.rmsAlpha, sigmaes, parameterDiff);
+               //LF.calculateAverageRMSProp(configure.rmsAlpha, sigmaes, parameterDiff);
+               LF.calculateRMSProp(configure.rmsAlpha, learningRates, parameterDiff);
                parameterDiff *= configure.pGDConfigure.learningRate;
                LF.parameter.projectedlyUpdateGradient(parameterDiff);
                iterNm++;
@@ -141,6 +145,7 @@ class UPEMLikelihoodFunction : public PGDFunction<parameter> {
    friend class UPEM<parameter>;
    public:
       virtual TFlt JointLikelihood(Datum datum, TInt latentVariable) const = 0;
+      virtual void updateAcquaintance() = 0;
       virtual void maximize() = 0;
       virtual void calculateRProp(TFlt, parameter&, parameter&) = 0;
       virtual void calculateRMSProp(TFlt, parameter&, parameter&) = 0;
@@ -161,7 +166,8 @@ class UPEMLikelihoodFunction : public PGDFunction<parameter> {
          }
       }
    protected:
-      TInt latentVariableSize;
+      TInt latentVariableSize, allPossibleEdgeNum;
+      THash<TInt, THash<TInt, TInt> > allPossibleEdges;
       THash<TInt, THash<TInt,TFlt> > latentDistributions;
 };
 

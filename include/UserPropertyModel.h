@@ -14,8 +14,8 @@
 #endif
 #define ARMA_64BIT_WORD 
 #include <armadillo>
-using namespace arma;
-*/
+using namespace arma;*/
+
 
 class UserPropertyModel {
    public:
@@ -39,7 +39,7 @@ class UserPropertyModel {
       void SaveInferred(const TStr& OutFNm);
       void SaveUserProperty(const TStr& OutFNm);
 
-      void GenParameters() { lossFunction.GenParameters(Network,userPropertyFunctionConfigure);}
+      void GenParameters(TInt NEdges) { lossFunction.GenParameters(Network,userPropertyFunctionConfigure, NEdges);}
       void GenCascade(TCascade& c);
       void GenerateGroundTruth(const int& TNetwork, const int& NNodes, const int& NEdges, const TStr& NetworkParams);
       void SaveGroundTruth(TStr);

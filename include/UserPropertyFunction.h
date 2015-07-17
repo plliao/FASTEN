@@ -32,7 +32,7 @@ class UserPropertyParameter {
       void AddEqualTHash(THash<TIntPr,TFlt>& dst, const THash<TIntPr,TFlt>& src);
       void MultiplyTHash(THash<TIntPr,TFlt>& dst, const TFlt multiplier);
       void init(Data data, UserPropertyFunctionConfigure configure);
-      void GenParameters(TStrFltFltHNEDNet& network, UserPropertyFunctionConfigure configure);
+      void GenParameters(TStrFltFltHNEDNet& network, UserPropertyFunctionConfigure configure, TInt);
       
       TFlt GetAlpha(TInt srcNId, TInt dstNId, TInt topic) const;     
       TFlt GetAcquaitance(TInt srcNId, TInt dstNId) const;
@@ -41,7 +41,7 @@ class UserPropertyParameter {
 
       TFlt propertyMinValue, propertyInitValue, propertyMaxValue;
       TFlt topicMinValue, topicInitValue, topicMaxValue, topicStdValue;
-      TFlt acquaintanceMinValue, acquaintanceInitValue, acquaintanceMaxValue;
+      //TFlt acquaintanceMinValue, acquaintanceInitValue, acquaintanceMaxValue;
       TFlt MaxAlpha, MinAlpha;
       TInt propertySize;
       TRegularizer Regularizer;
@@ -57,12 +57,13 @@ class UserPropertyFunction : public UPEMLikelihoodFunction<UserPropertyParameter
       void set(UserPropertyFunctionConfigure configure);
       TFlt JointLikelihood(Datum datum, TInt latentVariable) const;
       void maximize();
+      void updateAcquaintance();
       UserPropertyParameter& gradient(Datum datum);
       void calculateRProp(TFlt, UserPropertyParameter&, UserPropertyParameter&);
       void calculateRMSProp(TFlt, UserPropertyParameter&, UserPropertyParameter&);
       void calculateAverageRMSProp(TFlt, TFltV&, UserPropertyParameter&);
-      void initParameter(Data data, UserPropertyFunctionConfigure configure) {parameter.init(data,configure);}
-      void GenParameters(TStrFltFltHNEDNet& network, UserPropertyFunctionConfigure configure) { set(configure); parameter.GenParameters(network, configure);}
+      void initParameter(Data data, UserPropertyFunctionConfigure configure);
+      void GenParameters(TStrFltFltHNEDNet& network, UserPropertyFunctionConfigure configure, TInt edgeNums) { set(configure); parameter.GenParameters(network, configure, edgeNums);}
       TFlt GetAlpha(TInt srcNId, TInt dstNId, TInt topic) const { return parameter.GetAlpha(srcNId, dstNId, topic);}     
       TFlt GetAcquaitance(TInt srcNId, TInt dstNId) const { return parameter.GetAcquaitance(srcNId, dstNId);}
       TFlt GetPropertyValue(TInt srcNId, TInt dstNId) const { return parameter.GetPropertyValue(srcNId, dstNId);}

@@ -34,13 +34,13 @@ int main(int argc, char* argv[]) {
   const int propertySize  = Env.GetIfArgPrefixInt("-p:", 10, "Latent variable size");
   
   const double propertyInitValue = Env.GetIfArgPrefixFlt("-ipv:", 0.0, "Initial property value (default:1)\n");
-  const double propertyMinValue = Env.GetIfArgPrefixFlt("-lpv:", -100.0, "Minimum property value (default:0.1)\n");
-  const double propertyMaxValue = Env.GetIfArgPrefixFlt("-upv:", 100.0, "Maximum property value (default:10)\n");
+  const double propertyMinValue = Env.GetIfArgPrefixFlt("-lpv:", -5.0, "Minimum property value (default:0.1)\n");
+  const double propertyMaxValue = Env.GetIfArgPrefixFlt("-upv:", 5.0, "Maximum property value (default:10)\n");
 
   const double topicInitValue = Env.GetIfArgPrefixFlt("-itv:", 0.0, "Initial topic value (default:1)\n");
   const double topicStdValue = Env.GetIfArgPrefixFlt("-stv:", 1.0, "Initial topic value (default:1.0)\n");
-  const double topicMinValue = Env.GetIfArgPrefixFlt("-ltv:", -100.0, "Minimum topic value (default:0.1)\n");
-  const double topicMaxValue = Env.GetIfArgPrefixFlt("-utv:", 100.0, "Maximum topic value (default:10)\n");
+  const double topicMinValue = Env.GetIfArgPrefixFlt("-ltv:", -5.0, "Minimum topic value (default:0.1)\n");
+  const double topicMaxValue = Env.GetIfArgPrefixFlt("-utv:", 5.0, "Maximum topic value (default:10)\n");
   
   const double acquaintanceInitValue = Env.GetIfArgPrefixFlt("-iav:", 0.01, "Initial acquaintance value (default:0.01)\n");
   const double acquaintanceMinValue = Env.GetIfArgPrefixFlt("-lav:", 0.0005, "Minimum acquaintance value (default:0.0)\n");
@@ -87,7 +87,7 @@ int main(int argc, char* argv[]) {
   // Generate network
   if (TNetwork<2) {
 	  userProperty.GenerateGroundTruth(TNetwork, NNodes, NEdges, NetworkParams); // Generate network
-	  userProperty.GenParameters(); // Generate Alphas
+	  userProperty.GenParameters(NEdges); // Generate Alphas
   } else {
 	  TFIn GFIn(GroundTruthFileName);     // open network file
           InfoPathFileIO::LoadNetworkTxt(GFIn, userProperty.Network, userProperty.nodeInfo);

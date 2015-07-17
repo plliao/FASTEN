@@ -209,10 +209,10 @@ void UserPropertyModel::GenerateGroundTruth(const int& TNetwork, const int& NNod
              Network.AddNode(NI.GetId()); 
              nodeInfo.NodeNmH.AddDat(NI.GetId(), TNodeInfo(TStr::Fmt("%d", NI.GetId()), 0)); 
           }
-	  for (TNGraph::TEdgeI EI = Graph->BegEI(); EI < Graph->EndEI(); EI++) { 
+	  /*for (TNGraph::TEdgeI EI = Graph->BegEI(); EI < Graph->EndEI(); EI++) { 
              if (EI.GetSrcNId()==EI.GetDstNId()) { continue; } 
              Network.AddEdge(EI.GetSrcNId(),EI.GetDstNId(),TFltFltH()); 
-          }
+          }*/
 
 	  if (verbose) { printf("Network structure has been generated succesfully!\n"); }
 }
@@ -253,7 +253,7 @@ void UserPropertyModel::SaveGroundTruth(TStr fileNm) {
             FOut.PutStr(TStr::Fmt("%d,%d,%f,%f\n", srcNId, dstNId, 0.0, alpha));  
          }
       }
-      //printf("\n");
+      printf("\n");
       EI.GetDat().AddDat(0.0,lossFunction.GetAlpha(srcNId, dstNId, topic));
    }
 }
@@ -285,6 +285,7 @@ void UserPropertyModel::Infer(const TFltV& Steps, const TStr& OutFNm) {
    //ExtractFeature();
    lossFunction.InitLatentVariable(data, eMConfigure);
    lossFunction.initParameter(data, userPropertyFunctionConfigure);
+   SaveUserProperty(OutFNm + "_InitialUserProperty.txt");
    
    TSampling Sampling = eMConfigure.pGDConfigure.sampling;
    TStrV ParamSamplingV; eMConfigure.pGDConfigure.ParamSampling.SplitOnAllCh(';', ParamSamplingV);
@@ -374,7 +375,7 @@ void UserPropertyModel::ExtractFeature() {
    int hiddenSize = userPropertyFunctionConfigure.propertySize;
    int inputSize = nodeInfo.NodeNmH.Len(); 
    int outputSize = nodeInfo.NodeNmH.Len(); 
-   int maxEpoch = 200, epoch = 0;
+   int maxEpoch = 100, epoch = 0;
 
    float learningRate = 1e-3, trainValidRatio = 0.5;
    int trainSize = CascLen * trainValidRatio, validSize = CascLen - trainSize;
@@ -487,5 +488,5 @@ void UserPropertyModel::ExtractFeature() {
          lossFunction.getParameter().receiverProperty.AddDat(index, W2(i,j)); 
       }
    }
-} 
-*/
+}*/ 
+
