@@ -136,7 +136,7 @@ class EMLikelihoodFunction : public PGDFunction<parameter> {
             latentDistributions.AddDat(CI.GetKey(),latentDistribution);
          }
       }
-   protected:
+   public:
       TInt latentVariableSize;
       THash<TInt, THash<TInt,TFlt> > latentDistributions;
 };

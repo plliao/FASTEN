@@ -28,7 +28,7 @@ class PGD {
          double time = data.time;
          THash<TInt, TCascade> &cascH = data.cascH;
          TIntFltH &cascadesIdx = data.cascadesPositions;
-         size_t scale = configure.maxIterNm / 100;
+         size_t scale = configure.maxIterNm / 1;
          TIntFltH sampledCascadesPositions;
       
          while(!IsTerminate()) { 
@@ -82,7 +82,7 @@ class PGDFunction {
       const T& getParameterGrad() const { return parameterGrad;}
       T& getParameter() { return parameter;}
       T& getParameterGrad() { return parameterGrad;}
-   protected:
+   public:
       T parameter, parameterGrad;
 };
 

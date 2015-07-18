@@ -41,8 +41,6 @@ class UPEM {
 
             Expectation(LF,data);      
             Maximization(LF,data);
-            //if (emIterNm!=0) LF.updateAcquaintance();
-            LF.updateAcquaintance();
             emIterNm++;
 
             THash<TInt,TFlt> kPi = LF.getPriorTHash();
@@ -102,7 +100,18 @@ class UPEM {
          THash<TInt, TCascade> &cascH = data.cascH;
          size_t scale = configure.pGDConfigure.maxIterNm / 1;
          //TFltV sigmaes(4); sigmaes.Add(0.0); sigmaes.Add(0.0); sigmaes.Add(0.0); sigmaes.Add(0.0);
-         parameter learningRates;
+         //parameter learningRates;
+
+         TIntFltH sampledCascadesPositionsHash;
+         size_t size = sampledCascadesPositions.Len();
+         for (size_t i=0; i<size; i++) {
+            int position = sampledCascadesPositions[i];
+            sampledCascadesPositionsHash.AddDat(position, 0.0);
+         }
+         Data sampleData = {data.NodeNmH, data.cascH, sampledCascadesPositionsHash, data.time};
+         loss = LF.PGDFunction<parameter>::loss(sampleData)/(double)size;
+         printf("iterNm: %d, loss: %f -> ",(int)iterNm,loss());
+         fflush(stdout);
       
          while(coorIterNm < configure.maxCoorIterNm) {
             iterNm = 0;
@@ -116,10 +125,10 @@ class UPEM {
                   Datum datum = {data.NodeNmH, cascH, cascH.GetKey(position), time};
                   parameterDiff += LF.gradient(datum);
                }
-               parameterDiff *= (1.0/double(configure.pGDConfigure.batchSize));
+               //parameterDiff *= (1.0/double(configure.pGDConfigure.batchSize));
                //LF.calculateAverageRMSProp(configure.rmsAlpha, sigmaes, parameterDiff);
-               LF.calculateRMSProp(configure.rmsAlpha, learningRates, parameterDiff);
-               parameterDiff *= configure.pGDConfigure.learningRate;
+               //LF.calculateRMSProp(configure.rmsAlpha, learningRates, parameterDiff);
+               parameterDiff *= configure.pGDConfigure.learningRate/double(configure.pGDConfigure.batchSize);
                LF.parameter.projectedlyUpdateGradient(parameterDiff);
                iterNm++;
                if (iterNm % scale == 0) {
@@ -145,7 +154,6 @@ class UPEMLikelihoodFunction : public PGDFunction<parameter> {
    friend class UPEM<parameter>;
    public:
       virtual TFlt JointLikelihood(Datum datum, TInt latentVariable) const = 0;
-      virtual void updateAcquaintance() = 0;
       virtual void maximize() = 0;
       virtual void calculateRProp(TFlt, parameter&, parameter&) = 0;
       virtual void calculateRMSProp(TFlt, parameter&, parameter&) = 0;
@@ -153,21 +161,21 @@ class UPEMLikelihoodFunction : public PGDFunction<parameter> {
       virtual THash<TInt,TFlt> getPriorTHash() const = 0;
       TFlt loss(Datum datum) const {
          TFlt datumLoss = 0.0;
-         for (TInt i=0;i<latentVariableSize;i++) datumLoss += latentDistributions.GetDat(datum.index).GetDat(i) * JointLikelihood(datum,i);
+         for (TInt i=0; i < topicSize; i++) datumLoss += latentDistributions.GetDat(datum.index).GetDat(i) * JointLikelihood(datum,i);
          return -1.0 * datumLoss;
       }
       void InitLatentVariable(Data data, UPEMConfigure configure) {
          latentDistributions.Clr();
-         latentVariableSize = configure.latentVariableSize;
+         topicSize = configure.latentVariableSize;
          for (THash<TInt, TCascade>::TIter CI = data.cascH.BegI(); !CI.IsEnd(); CI++) {
             THash<TInt,TFlt> latentDistribution;
-            for (TInt i=0;i<latentVariableSize;i++) latentDistribution.AddDat(i,double(1/latentVariableSize));
+            for (TInt i=0; i < topicSize;i++) latentDistribution.AddDat(i,double(1/topicSize));
             latentDistributions.AddDat(CI.GetKey(),latentDistribution);
          }
       }
-   protected:
-      TInt latentVariableSize, allPossibleEdgeNum;
-      THash<TInt, THash<TInt, TInt> > allPossibleEdges;
+   public:
+      TInt topicSize, allPossibleEdgeNum;
+      THash<TIntPr, TInt> allPossibleEdges;
       THash<TInt, THash<TInt,TFlt> > latentDistributions;
 };
 

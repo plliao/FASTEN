@@ -38,14 +38,17 @@ class UserPropertyModel {
       void LoadGroundTruthTxt(const TStr& InFNm);
       void SaveInferred(const TStr& OutFNm);
       void SaveUserProperty(const TStr& OutFNm);
+      void ReadUserProperty(const TStr& OutFNm);
+      void SaveModel(const TStr& OutFNm);
+      void ReadModel(const TStr& OutFNm);
 
-      void GenParameters(TInt NEdges) { lossFunction.GenParameters(Network,userPropertyFunctionConfigure, NEdges);}
+      void GenParameters(TInt NEdges) { lossFunction.GenParameters(Network, userPropertyFunctionConfigure);}
       void GenCascade(TCascade& c);
       void GenerateGroundTruth(const int& TNetwork, const int& NNodes, const int& NEdges, const TStr& NetworkParams);
       void SaveGroundTruth(TStr);
 
-      void SetLatentVariableSize(const TInt size) { userPropertyFunctionConfigure.topicSize = eMConfigure.latentVariableSize = size;}
-      void SetPropertySize(const TInt size) { userPropertyFunctionConfigure.propertySize = size;}
+      void SetLatentVariableSize(const TInt size) { userPropertyFunctionConfigure.parameter.topicSize = eMConfigure.latentVariableSize = size;}
+      void SetPropertySize(const TInt size) { userPropertyFunctionConfigure.parameter.propertySize = size;}
       void SetTotalTime(const float& tt) { TotalTime = tt; }
       void SetModel(const TModel& model) { nodeInfo.Model = model; }
       void SetWindow(const double& window) { Window = window; }
@@ -65,24 +68,11 @@ class UserPropertyModel {
       void SetCOMaxIterNm(const size_t maxIterNm) { eMConfigure.maxCoorIterNm = maxIterNm;}
 
       void SetAging(const double& aging) { Aging = aging; }
-      void SetRegularizer(const TRegularizer& reg) { userPropertyFunctionConfigure.Regularizer = reg; }
-      void SetMu(const double& mu) { userPropertyFunctionConfigure.Mu = mu; }
+      void SetRegularizer(const TRegularizer& reg) { userPropertyFunctionConfigure.parameter.Regularizer = reg; }
+      void SetMu(const double& mu) { userPropertyFunctionConfigure.parameter.Mu = mu; }
       
-      void SetAcquaintanceMinValue(const double& mv) { userPropertyFunctionConfigure.acquaintanceMinValue = mv; }
-      void SetAcquaintanceMaxValue(const double& mv) { userPropertyFunctionConfigure.acquaintanceMaxValue = mv; }
-      void SetAcquaintanceInitValue(const double& iv) { userPropertyFunctionConfigure.acquaintanceInitValue = iv; }
-      
-      void SetPropertyMinValue(const double& mv) { userPropertyFunctionConfigure.propertyMinValue = mv; }
-      void SetPropertyMaxValue(const double& mv) { userPropertyFunctionConfigure.propertyMaxValue = mv; }
-      void SetPropertyInitValue(const double& iv) { userPropertyFunctionConfigure.propertyInitValue = iv; }
-      
-      void SetTopicMinValue(const double& mv) { userPropertyFunctionConfigure.topicMinValue = mv; }
-      void SetTopicMaxValue(const double& mv) { userPropertyFunctionConfigure.topicMaxValue = mv; }
-      void SetTopicInitValue(const double& iv) { userPropertyFunctionConfigure.topicInitValue = iv; }
-      void SetTopicStdValue(const double& sv) { userPropertyFunctionConfigure.topicStdValue = sv; }
-
-      void SetMaxAlpha(const double& ma) {userPropertyFunctionConfigure.MaxAlpha = edgeInfo.MaxAlpha = ma;} 
-      void SetMinAlpha(const double& ma) {userPropertyFunctionConfigure.MinAlpha = edgeInfo.MinAlpha = ma;} 
+      void SetMaxAlpha(const double& ma) {userPropertyFunctionConfigure.parameter.MaxAlpha = edgeInfo.MaxAlpha = ma;} 
+      void SetMinAlpha(const double& ma) {userPropertyFunctionConfigure.parameter.MinAlpha = edgeInfo.MinAlpha = ma;} 
 
       void Init();
       int GetCascs() { return CascH.Len(); }

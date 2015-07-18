@@ -26,28 +26,74 @@ void UserPropertyModel::SaveUserProperty(const TStr& OutFNm) {
      TInt NId = NI.GetKey();
      FOut.PutStr(TStr::Fmt("%d;", NId()));
      TIntPr index; index.Val1 = NId;
-     for (TInt property = 0; property < parameter.propertySize; property++) {
+     for (TInt property = 0; property < parameter.configure.propertySize; property++) {
         index.Val2 = property;
         FOut.PutStr(TStr::Fmt("%f", parameter.spreaderProperty.GetDat(index)()));
-        if (property!=parameter.propertySize-1) FOut.PutStr(",");
+        if (property != parameter.configure.propertySize-1) FOut.PutStr(",");
      }
      FOut.PutStr(";");
 
-     for (TInt property = 0; property < parameter.propertySize; property++) {
+     for (TInt property = 0; property < parameter.configure.propertySize; property++) {
         index.Val2 = property;
         FOut.PutStr(TStr::Fmt("%f", parameter.receiverProperty.GetDat(index)()));
-        if (property!=parameter.propertySize-1) FOut.PutStr(",");
+        if (property != parameter.configure.propertySize-1) FOut.PutStr(",");
      }
-     FOut.PutStr(";");
 
-     TInt latentVariableSize = parameter.kPi.Len();
-     for (TInt latentVariable = 0; latentVariable < latentVariableSize; latentVariable++) {
-        index.Val2 = latentVariable;
-        FOut.PutStr(TStr::Fmt("%f", parameter.topicReceive.GetDat(index)()));
-        if (latentVariable!=latentVariableSize-1) FOut.PutStr(",");
-     }
      FOut.PutStr("\n");
   }
+}
+
+void UserPropertyModel::SaveModel(const TStr& OutFNm) {
+  TFOut FOut(OutFNm);
+  UserPropertyParameter& parameter = lossFunction.getParameter();
+  TInt size = parameter.kWeights[0].Len();
+  for (THash<TInt, THash<TInt,TFlt> >::TIter WI = parameter.kWeights.BegI(); !WI.IsEnd(); WI++) {
+     for (THash<TInt,TFlt>::TIter VI = WI.GetDat().BegI(); !VI.IsEnd(); VI++) {
+        FOut.PutStr(TStr::Fmt("%f", VI.GetDat()));
+        if (VI.GetKey()!=size-1) FOut.PutStr(",");
+     }
+     FOut.PutStr("\n");
+  }  
+}
+
+void UserPropertyModel::ReadUserProperty(const TStr& InFNm) {
+  TFIn FIn(InFNm);
+  TStr line;
+  UserPropertyParameter& parameter = lossFunction.getParameter();
+  while (!FIn.Eof()) {
+     FIn.GetNextLn(line);
+     TStrV tokens, spreaderPropertyStrV, receiverPropertyStrV;
+     line.SplitOnAllCh(';', tokens);
+     tokens[1].SplitOnAllCh(',', spreaderPropertyStrV);
+     tokens[2].SplitOnAllCh(',', receiverPropertyStrV);
+
+     TInt NId = tokens[0].GetInt();
+     TInt size = spreaderPropertyStrV.Len();
+     TIntPr index(NId, 0);
+     for (TInt i=0; i<size; i++) {
+        index.Val2 = i;
+        parameter.spreaderProperty.AddDat(index, spreaderPropertyStrV[i].GetFlt());
+        parameter.receiverProperty.AddDat(index, receiverPropertyStrV[i].GetFlt());
+     }
+  }
+}
+
+void UserPropertyModel::ReadModel(const TStr& InFNm) {
+   TFIn FIn(InFNm);
+   TStr line;
+   UserPropertyParameter& parameter = lossFunction.getParameter();
+   TInt topic = 0;
+   while (!FIn.Eof()) {
+      FIn.GetNextLn(line);
+      TStrV tokens;
+      line.SplitOnAllCh(',', tokens);
+
+      TInt size = tokens.Len();
+      for (TInt i=0; i<size; i++) {
+         parameter.kWeights.GetDat(topic).AddDat(i, tokens[i].GetFlt());
+      }
+      topic++;
+   }
 }
 
 void UserPropertyModel::GenCascade(TCascade& C) {
@@ -76,7 +122,7 @@ void UserPropertyModel::GenCascade(TCascade& C) {
 
                 TInt topic;
                 TFlt p = TFlt::Rnd.GetUniDev(), accP = 0.0;
-                for (TInt t=0; t<userPropertyFunctionConfigure.topicSize;t++) {
+                for (TInt t=0; t < userPropertyFunctionConfigure.parameter.topicSize;t++) {
                    accP += lossFunction.getParameter().kPi.GetDat(t);
                    if (p <= accP) {
                       topic = t;
@@ -112,7 +158,7 @@ void UserPropertyModel::GenCascade(TCascade& C) {
 				else alpha = (double)lossFunction.GetAlpha(NId,DstNId,topic);
 				if (verbose) { printf("GlobalTime:%f, nodes:%d->%d, alpha:%f\n", GlobalTime, NId, DstNId, alpha); }
 
-				if (alpha<1e-9) { continue; }
+				if (alpha<=0.0001) { continue; }
 
 				// not infecting the parent
 				if (InfectedBy.IsKey(NId) && InfectedBy.GetDat(NId).Val == DstNId)
@@ -209,10 +255,10 @@ void UserPropertyModel::GenerateGroundTruth(const int& TNetwork, const int& NNod
              Network.AddNode(NI.GetId()); 
              nodeInfo.NodeNmH.AddDat(NI.GetId(), TNodeInfo(TStr::Fmt("%d", NI.GetId()), 0)); 
           }
-	  /*for (TNGraph::TEdgeI EI = Graph->BegEI(); EI < Graph->EndEI(); EI++) { 
+	  for (TNGraph::TEdgeI EI = Graph->BegEI(); EI < Graph->EndEI(); EI++) { 
              if (EI.GetSrcNId()==EI.GetDstNId()) { continue; } 
              Network.AddEdge(EI.GetSrcNId(),EI.GetDstNId(),TFltFltH()); 
-          }*/
+          }
 
 	  if (verbose) { printf("Network structure has been generated succesfully!\n"); }
 }
@@ -224,7 +270,7 @@ void UserPropertyModel::SaveGroundTruth(TStr fileNm) {
    for (THash<TInt,TFlt>::TIter piI = kPi.BegI(); !piI.IsEnd(); piI++) printf("topic %d: %f, ", piI.GetKey()(), piI.GetDat()());
    printf("\n");
 
-   for (TInt latentVariable=0; latentVariable<userPropertyFunctionConfigure.topicSize; latentVariable++) {
+   for (TInt latentVariable=0; latentVariable < userPropertyFunctionConfigure.parameter.topicSize; latentVariable++) {
       TFOut FOut(fileNm + TStr::Fmt("-%d-network.txt", latentVariable+1));
       for (THash<TInt, TNodeInfo>::TIter NI = nodeInfo.NodeNmH.BegI(); NI < nodeInfo.NodeNmH.EndI(); NI++) {
          FOut.PutStr(TStr::Fmt("%d,%s\n", NI.GetKey().Val, NI.GetDat().Name.CStr()));
@@ -235,26 +281,23 @@ void UserPropertyModel::SaveGroundTruth(TStr fileNm) {
    for (TStrFltFltHNEDNet::TEdgeI EI = Network.BegEI(); EI < Network.EndEI(); EI++) {
       TInt srcNId = EI.GetSrcNId(), dstNId = EI.GetDstNId();
 
-      printf("%d,%d , property value:%f, acquaitance:%f, \n", \
-             srcNId(), dstNId(), lossFunction.GetPropertyValue(srcNId, dstNId)(),lossFunction.GetAcquaitance(srcNId, dstNId)());
-      TFlt maxTopicValue = -DBL_MAX;
+      printf("%d,%d , \n", srcNId(), dstNId());
+      TFlt maxValue = -DBL_MAX;
       TInt topic = -1;         
-      for (TInt latentVariable=0; latentVariable<userPropertyFunctionConfigure.topicSize; latentVariable++) {
+      for (TInt latentVariable=0; latentVariable < userPropertyFunctionConfigure.parameter.topicSize; latentVariable++) {
          TFlt alpha = lossFunction.GetAlpha(srcNId, dstNId, latentVariable)();
-         TFlt topicValue = lossFunction.GetTopicValue(srcNId, dstNId,latentVariable);
-         if (topicValue > maxTopicValue) {
-            maxTopicValue = topicValue;
+         if (alpha > maxValue) {
+            maxValue = alpha;
             topic = latentVariable;
          }
-         printf("\t\ttopic %d alpha:%f, topic value:%f, \n", latentVariable(), alpha(), topicValue());
+         printf("\t\ttopic %d alpha:%f \n", latentVariable(), alpha());
          if (alpha > edgeInfo.MinAlpha ) {
-            if (alpha > edgeInfo.MaxAlpha) alpha = edgeInfo.MaxAlpha;
             TFOut FOut(fileNm + TStr::Fmt("-%d-network.txt", latentVariable+1), true);
             FOut.PutStr(TStr::Fmt("%d,%d,%f,%f\n", srcNId, dstNId, 0.0, alpha));  
          }
       }
       printf("\n");
-      EI.GetDat().AddDat(0.0,lossFunction.GetAlpha(srcNId, dstNId, topic));
+      EI.GetDat().AddDat(0.0, maxValue);
    }
 }
 
@@ -282,10 +325,17 @@ void UserPropertyModel::Infer(const TFltV& Steps, const TStr& OutFNm) {
    em.set(eMConfigure);
    TIntFltH CascadesPositions;
    Data data = {nodeInfo.NodeNmH, CascH, CascadesPositions, 0.0};
+    
    //ExtractFeature();
    lossFunction.InitLatentVariable(data, eMConfigure);
    lossFunction.initParameter(data, userPropertyFunctionConfigure);
-   SaveUserProperty(OutFNm + "_InitialUserProperty.txt");
+
+   TStr expName, resultDir, outName, modelName;
+   OutFNm.SplitOnCh(resultDir, '/', outName);
+   outName.SplitOnCh(expName, '-', modelName);
+   ReadUserProperty("data/" + expName + "_UserProperty.txt");
+   ReadModel("data/" + expName + "_Model.txt");
+   //SaveUserProperty(OutFNm + "_InitialUserProperty.txt");
    
    TSampling Sampling = eMConfigure.pGDConfigure.sampling;
    TStrV ParamSamplingV; eMConfigure.pGDConfigure.ParamSampling.SplitOnAllCh(';', ParamSamplingV);
@@ -300,15 +350,15 @@ void UserPropertyModel::Infer(const TFltV& Steps, const TStr& OutFNm) {
             CascadesPositions.AddDat(i) = CascH[i].GetMinTm();
          }
       }
-      Data data = {nodeInfo.NodeNmH, CascH, CascadesPositions, Steps[t]};
-      em.Optimize(lossFunction, data);
+      //Data data = {nodeInfo.NodeNmH, CascH, CascadesPositions, Steps[t]};
+      //em.Optimize(lossFunction, data);
 
       printf("prior probability:");
       const THash<TInt,TFlt>& kPi = lossFunction.getParameter().kPi;
       for (THash<TInt,TFlt>::TIter piI = kPi.BegI(); !piI.IsEnd(); piI++) printf("topic %d: %f, ", piI.GetKey()(), piI.GetDat()());
       printf("\n");
 
-      for (TInt latentVariable = 0; latentVariable < userPropertyFunctionConfigure.topicSize; latentVariable++) {
+      for (TInt latentVariable = 0; latentVariable < userPropertyFunctionConfigure.parameter.topicSize; latentVariable++) {
          TFOut FOut(OutFNm + TStr("_") + latentVariable.GetStr() + ".txt");
          for (THash<TInt, TNodeInfo>::TIter NI = nodeInfo.NodeNmH.BegI(); NI < nodeInfo.NodeNmH.EndI(); NI++) {
             FOut.PutStr(TStr::Fmt("%d,%s\n", NI.GetKey().Val, NI.GetDat().Name.CStr()));
@@ -322,24 +372,24 @@ void UserPropertyModel::Infer(const TFltV& Steps, const TStr& OutFNm) {
             if (SI.GetKey()== DI.GetKey()) continue;
 
             TInt srcNId = SI.GetKey(), dstNId = DI.GetKey();
+            TIntPr index(srcNId, dstNId);
+            if (!lossFunction.allPossibleEdges.IsKey(index)) continue;
 
-            //printf("%d,%d: property value:%f, acquaintance value:%f, \n", srcNId(), dstNId(), propertyValue(), acquaintanceValue());
-            TFlt maxTopicValue = -DBL_MAX; TInt topic = -1;
-            for (TInt latentVariable = 0; latentVariable < userPropertyFunctionConfigure.topicSize; latentVariable++) {
-               TFlt topicValue = lossFunction.GetTopicValue(srcNId, dstNId,latentVariable);
+            printf("%d,%d:\n", srcNId(), dstNId());
+            TFlt maxValue = -DBL_MAX; TInt topic = -1;
+            for (TInt latentVariable = 0; latentVariable < userPropertyFunctionConfigure.parameter.topicSize; latentVariable++) {
                TFlt alpha = lossFunction.GetAlpha(srcNId, dstNId, latentVariable);
-               if (topicValue > maxTopicValue && kPi.GetDat(latentVariable) > 0.0001) { 
-                  maxTopicValue = topicValue;
+               if (alpha > maxValue && kPi.GetDat(latentVariable) > 0.0001) { 
+                  maxValue = alpha;
                   topic = latentVariable;
                }
-               //printf("\t\ttopic %d, topicValue: %f, alpha:%f\n", latentVariable(), topicValue, alpha);
+               printf("\t\ttopic %d, alpha:%f\n", latentVariable(), alpha());
                if (alpha > edgeInfo.MinAlpha ) {
-                  if (alpha > edgeInfo.MaxAlpha) alpha = edgeInfo.MaxAlpha;
                   TFOut FOut(OutFNm + TStr("_") + latentVariable.GetStr() + ".txt", true);
                   FOut.PutStr(TStr::Fmt("%d,%d,%f,%f\n", srcNId, dstNId, Steps[t], alpha));  
                }
             }
-            //printf("\n");
+            printf("\n");
 
             //if (i%100000==0) printf("add edge: %d,%d , edge size: %d, edge index: %d\n", srcNId(), dstNId(), nodeSize*nodeSize,i);
             TFlt alpha = lossFunction.GetAlpha(srcNId, dstNId, topic);

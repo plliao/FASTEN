@@ -33,19 +33,6 @@ int main(int argc, char* argv[]) {
   const int latentVariableSize  = Env.GetIfArgPrefixInt("-K:", 3, "Latent variable size");
   const int propertySize  = Env.GetIfArgPrefixInt("-p:", 10, "Latent variable size");
   
-  const double propertyInitValue = Env.GetIfArgPrefixFlt("-ipv:", 0.0, "Initial property value (default:1)\n");
-  const double propertyMinValue = Env.GetIfArgPrefixFlt("-lpv:", -5.0, "Minimum property value (default:0.1)\n");
-  const double propertyMaxValue = Env.GetIfArgPrefixFlt("-upv:", 5.0, "Maximum property value (default:10)\n");
-
-  const double topicInitValue = Env.GetIfArgPrefixFlt("-itv:", 0.0, "Initial topic value (default:1)\n");
-  const double topicStdValue = Env.GetIfArgPrefixFlt("-stv:", 1.0, "Initial topic value (default:1.0)\n");
-  const double topicMinValue = Env.GetIfArgPrefixFlt("-ltv:", -5.0, "Minimum topic value (default:0.1)\n");
-  const double topicMaxValue = Env.GetIfArgPrefixFlt("-utv:", 5.0, "Maximum topic value (default:10)\n");
-  
-  const double acquaintanceInitValue = Env.GetIfArgPrefixFlt("-iav:", 0.01, "Initial acquaintance value (default:0.01)\n");
-  const double acquaintanceMinValue = Env.GetIfArgPrefixFlt("-lav:", 0.0005, "Minimum acquaintance value (default:0.0)\n");
-  //const double acquaintanceMaxValue = Env.GetIfArgPrefixFlt("-uav:", 50.0, "Maximum acquaintance value (default:100)\n");
-
   // num cascades, horizon per cascade & maximum time
   const int NCascades = Env.GetIfArgPrefixInt("-c:", 1000, "Number of cascades (default:1000)\n");
   const double Window = Env.GetIfArgPrefixFlt("-h:", 10.0, "Time horizon per cascade (default:10)\n");
@@ -70,19 +57,6 @@ int main(int argc, char* argv[]) {
   userProperty.SetPropertySize(propertySize);
   userProperty.SetMaxAlpha(MaxAlpha);
   userProperty.SetMinAlpha(MinAlpha);
-
-  userProperty.SetPropertyInitValue(propertyInitValue);
-  userProperty.SetPropertyMaxValue(propertyMaxValue);
-  userProperty.SetPropertyMinValue(propertyMinValue);
-
-  userProperty.SetTopicInitValue(topicInitValue);
-  userProperty.SetTopicStdValue(topicStdValue);
-  userProperty.SetTopicMaxValue(topicMaxValue);
-  userProperty.SetTopicMinValue(topicMinValue);
-
-  userProperty.SetAcquaintanceInitValue(acquaintanceInitValue);
-  userProperty.SetAcquaintanceMaxValue(MaxAlpha);
-  userProperty.SetAcquaintanceMinValue(acquaintanceMinValue);
 
   // Generate network
   if (TNetwork<2) {
@@ -112,6 +86,7 @@ int main(int argc, char* argv[]) {
   // Save Cascades
   InfoPathFileIO::SaveCascades(TStr::Fmt("%s-cascades.txt", FileName.CStr()), userProperty.CascH, userProperty.nodeInfo);
   userProperty.SaveUserProperty(TStr::Fmt("%s_UserProperty.txt",FileName.CStr()));
+  userProperty.SaveModel(TStr::Fmt("%s_Model.txt",FileName.CStr()));
 
   Catch
   printf("\nrun time: %s (%s)\n", ExeTm.GetTmStr(), TSecTm::GetCurTm().GetTmStr().CStr());
