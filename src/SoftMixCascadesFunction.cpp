@@ -303,7 +303,7 @@ SoftMixCascadesParameter& SoftMixCascadesParameter::projectedlyUpdateGradient(co
 }
 
 TFlt SoftMixCascadesParameter::GetTopicAlpha(TInt srcNId, TInt dstNId, TInt topic) const {
-   THash<TIntPr, TFlt> alphas = kAlphas.GetDat(topic);
+   const THash<TIntPr, TFlt>& alphas = kAlphas.GetDat(topic);
    TIntPr index(srcNId,dstNId);
    if (alphas.IsKey(index)) return alphas.GetDat(index);
    return InitAlpha;
