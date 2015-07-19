@@ -35,6 +35,7 @@ int main(int argc, char* argv[]) {
 
   evaluator.EvaluatePRC(steps1.Last(),false);
   evaluator.EvaluateAUC(steps1.Last());
+  printf("\n");
   evaluator.EvaluateMSE(steps1.Last());
   evaluator.PlotPRC(OutFNm);
   evaluator.PlotMSE(OutFNm);

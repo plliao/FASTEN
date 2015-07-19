@@ -33,6 +33,24 @@ void NodeSoftMixCascadesModel::SaveWeights(const TStr& OutFNm) {
    }
 }
 
+void NodeSoftMixCascadesModel::ReadWeights(const TStr& InFNm) {
+  TFIn FIn(InFNm);
+  TStr line; 
+  NodeSoftMixCascadesParameter& parameter = lossFunction.parameter;
+  while (!FIn.Eof()) {
+     FIn.GetNextLn(line);
+     TStrV tokens, weightStrV;
+     line.SplitOnAllCh(';', tokens);
+     tokens[1].SplitOnAllCh(',', weightStrV);
+
+     TInt NId = tokens[0].GetInt();
+     TInt size = weightStrV.Len();
+     for (TInt i=0; i<size; i++) {
+        parameter.nodeWeights.GetDat(NId).AddDat(i, weightStrV[i].GetFlt());
+     }
+  }
+}
+
 void NodeSoftMixCascadesModel::GenCascade(TCascade& C) {
 	bool verbose = false;
 	TIntFltH InfectedNIdH; TIntH InfectedBy;
@@ -262,6 +280,11 @@ void NodeSoftMixCascadesModel::Infer(const TFltV& Steps, const TStr& OutFNm) {
    TIntFltH CascadesPositions;
    Data data = {nodeInfo.NodeNmH, CascH, CascadesPositions, 0.0};
    lossFunction.init(data);
+
+   TStr expName, resultDir, outName, modelName;
+   OutFNm.SplitOnCh(resultDir, '/', outName);
+   outName.SplitOnCh(expName, '-', modelName);
+   //ReadWeights("data/" + expName + "_Weights.txt");
    lossFunction.initWeightParameter();
   
    printf("Soft Mix Cascades initialization done\n");
@@ -284,6 +307,16 @@ void NodeSoftMixCascadesModel::Infer(const TFltV& Steps, const TStr& OutFNm) {
       pgd.Optimize(lossFunction, data);
 
       const THash<TInt, THash<TIntPr, TFlt> >& kAlphas = lossFunction.getParameter().kAlphas;
+
+      THash<TInt, TFlt> kPi;
+      for (TInt topic = 0; topic < eMConfigure.latentVariableSize; topic ++) kPi.AddDat(topic, 0.0);
+      for (TIntFltH::TIter PI = CascadesPositions.BegI(); !PI.IsEnd(); PI++) {
+         TInt NId = CascH[PI.GetKey()].BegI().GetKey();
+         for (THash<TInt, TFlt>::TIter VI = kPi.BegI(); !VI.IsEnd(); VI++) {
+            VI.GetDat() += lossFunction.parameter.nodeWeights.GetDat(NId).GetDat(VI.GetKey());
+         }
+      } 
+      for (TInt topic = 0; topic < eMConfigure.latentVariableSize; topic ++) kPi.GetDat(topic) /= double(CascadesPositions.Len());
 
       for (THash<TInt, THash<TIntPr, TFlt> >::TIter NI = kAlphas.BegI(); !NI.IsEnd(); NI++) {
          TInt key = NI.GetKey();
@@ -312,8 +345,9 @@ void NodeSoftMixCascadesModel::Infer(const TFltV& Steps, const TStr& OutFNm) {
  
             FOut.PutStr(TStr::Fmt("%d,%d,%f,%f\n", srcNId, dstNId, Steps[t], alpha));
 
-            if (!inferredNetwork.GetEDat(srcNId, dstNId).IsKey(Steps[t])) inferredNetwork.GetEDat(srcNId,dstNId).AddDat(Steps[t]) = alpha;
-            else if (InferredNetwork.GetEDat(srcNId, dstNId).GetDat(Steps[t]) < alpha) InferredNetwork.GetEDat(srcNId, dstNId).GetDat(Steps[t]) = alpha;
+            if (!inferredNetwork.GetEDat(srcNId, dstNId).IsKey(Steps[t])) inferredNetwork.GetEDat(srcNId,dstNId).AddDat(Steps[t]) = alpha * kPi.GetDat(key);
+            else InferredNetwork.GetEDat(srcNId, dstNId).GetDat(Steps[t]) += alpha * kPi.GetDat(key);
+            //else if (InferredNetwork.GetEDat(srcNId, dstNId).GetDat(Steps[t]) < alpha) InferredNetwork.GetEDat(srcNId, dstNId).GetDat(Steps[t]) = alpha;
          }
       }   
    }

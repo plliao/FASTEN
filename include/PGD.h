@@ -28,8 +28,9 @@ class PGD {
          double time = data.time;
          THash<TInt, TCascade> &cascH = data.cascH;
          TIntFltH &cascadesIdx = data.cascadesPositions;
-         size_t scale = configure.maxIterNm / 1;
+         size_t scale = configure.maxIterNm / 5;
          TIntFltH sampledCascadesPositions;
+         T learningRate;
       
          while(!IsTerminate()) { 
             T parameterDiff;
@@ -39,6 +40,7 @@ class PGD {
                Datum datum = {data.NodeNmH, cascH, cascH.GetKey(cascadesIdx.GetKey(index)), time};
                parameterDiff += f.gradient(datum);
             }
+            f.calculateRMSProp(0.1, learningRate, parameterDiff);
             parameterDiff *= (configure.learningRate/double(configure.batchSize));
             f.parameter.projectedlyUpdateGradient(parameterDiff);
             iterNm++;
@@ -68,6 +70,7 @@ class PGDFunction {
    public:
       virtual T& gradient(Datum datum) = 0;
       virtual TFlt loss(Datum datum) const = 0;
+      virtual void calculateRMSProp(TFlt, T&, T&) {}
       TFlt loss(Data data) const {
          TFlt totalLoss = 0.0;
          TIntFltH &cascadesPositions = data.cascadesPositions;

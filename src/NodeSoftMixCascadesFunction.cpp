@@ -43,7 +43,7 @@ TFlt NodeSoftMixCascadesFunction::loss(Datum datum) const {
    //delete[] lossTable;
 
    //printf("datum:%d, Myloss:%f\n",datum.index(), totalLoss());
-   return -1.0 * totalLoss;
+   return totalLoss;
 }
 
 NodeSoftMixCascadesParameter& NodeSoftMixCascadesFunction::gradient(Datum datum) {
@@ -134,6 +134,38 @@ NodeSoftMixCascadesParameter& NodeSoftMixCascadesFunction::gradient(Datum datum)
    }
    
    return parameterGrad;
+}
+
+
+static void updateRMSProp(TFlt alpha, THash<TIntPr,TFlt>& lr, THash<TIntPr,TFlt>& gradient) {
+   for(THash<TIntPr,TFlt>::TIter GI = gradient.BegI(); !GI.IsEnd(); GI++) {
+      TIntPr key = GI.GetKey();
+      if (!lr.IsKey(key)) lr.AddDat(key, TMath::Sqrt(GI.GetDat() * GI.GetDat()));
+      else lr.GetDat(key) = TMath::Sqrt(alpha * lr.GetDat(key) * lr.GetDat(key) + (1.0 - alpha) * GI.GetDat() * GI.GetDat());
+      GI.GetDat() /= lr.GetDat(key);
+   }
+}
+
+static void updateRMSProp(TFlt alpha, THash<TInt,TFlt>& lr, THash<TInt,TFlt>& gradient) {
+   for(THash<TInt,TFlt>::TIter GI = gradient.BegI(); !GI.IsEnd(); GI++) {
+      TInt key = GI.GetKey();
+      if (!lr.IsKey(key)) lr.AddDat(key, TMath::Sqrt(GI.GetDat() * GI.GetDat()));
+      else lr.GetDat(key) = TMath::Sqrt(alpha * lr.GetDat(key) * lr.GetDat(key) + (1.0 - alpha) * GI.GetDat() * GI.GetDat());
+      GI.GetDat() /= lr.GetDat(key);
+   }
+}
+
+void NodeSoftMixCascadesFunction::calculateRMSProp(TFlt alpha, NodeSoftMixCascadesParameter& lr, NodeSoftMixCascadesParameter& gradient) {
+  /*for (THash<TInt, THash<TIntPr,TFlt> >::TIter AI = gradient.kAlphas.BegI(); !AI.IsEnd(); AI++) {
+     if (!lr.kAlphas.IsKey(AI.GetKey())) lr.kAlphas.AddDat(AI.GetKey(), THash<TIntPr,TFlt>());
+     updateRMSProp(alpha, lr.kAlphas.GetDat(AI.GetKey()), AI.GetDat());
+  }*/
+ 
+  for (THash<TInt, THash<TInt,TFlt> >::TIter NI = gradient.nodeWeights.BegI(); !NI.IsEnd(); NI++) {
+     if (!lr.nodeWeights.IsKey(NI.GetKey())) lr.nodeWeights.AddDat(NI.GetKey(), THash<TInt,TFlt>());
+     updateRMSProp(alpha, lr.nodeWeights.GetDat(NI.GetKey()), NI.GetDat());
+  } 
+  
 }
 
 void NodeSoftMixCascadesFunction::set(NodeSoftMixCascadesFunctionConfigure configure) {
@@ -273,7 +305,7 @@ NodeSoftMixCascadesParameter& NodeSoftMixCascadesParameter::projectedlyUpdateGra
    for (THash<TInt,THash<TInt,TFlt> >::TIter CI = p.nodeWeights.BegI(); !CI.IsEnd(); CI++) {
       THash<TInt,TFlt>& weight = nodeWeights.GetDat(CI.GetKey());
 
-      TFlt sum = 0.0, C = 0.5;;
+      TFlt sum = 0.0, C = 0.1;
       for (THash<TInt,TFlt>::TIter VI = weight.BegI(); !VI.IsEnd(); VI++) sum += VI.GetDat();
 
       for (THash<TInt,TFlt>::TIter VI = CI.GetDat().BegI(); !VI.IsEnd(); VI++) {

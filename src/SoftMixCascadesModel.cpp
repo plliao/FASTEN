@@ -286,6 +286,18 @@ void SoftMixCascadesModel::Infer(const TFltV& Steps, const TStr& OutFNm) {
 
       const THash<TInt, THash<TIntPr, TFlt> >& kAlphas = lossFunction.getParameter().kAlphas;
 
+      THash<TInt, TFlt> kPi;
+      for (TInt topic = 0; topic < eMConfigure.latentVariableSize; topic ++) kPi.AddDat(topic, 0.0);
+      for (TIntFltH::TIter PI = CascadesPositions.BegI(); !PI.IsEnd(); PI++) {
+         TInt CId = CascH.GetKey(PI.GetKey());
+         for (THash<TInt, TFlt>::TIter VI = kPi.BegI(); !VI.IsEnd(); VI++) {
+            VI.GetDat() += lossFunction.parameter.cascadesWeights.GetDat(CId).GetDat(VI.GetKey());
+         }
+      } 
+      for (TInt topic = 0; topic < eMConfigure.latentVariableSize; topic ++) {
+         kPi.GetDat(topic) /= double(CascadesPositions.Len());
+      }
+
       for (THash<TInt, THash<TIntPr, TFlt> >::TIter NI = kAlphas.BegI(); !NI.IsEnd(); NI++) {
          TInt key = NI.GetKey();
          const THash<TIntPr, TFlt>& alphas = NI.GetDat();
@@ -313,8 +325,9 @@ void SoftMixCascadesModel::Infer(const TFltV& Steps, const TStr& OutFNm) {
  
             FOut.PutStr(TStr::Fmt("%d,%d,%f,%f\n", srcNId, dstNId, Steps[t], alpha));
 
-            if (!inferredNetwork.GetEDat(srcNId, dstNId).IsKey(Steps[t])) inferredNetwork.GetEDat(srcNId,dstNId).AddDat(Steps[t]) = alpha;
-            else if (InferredNetwork.GetEDat(srcNId, dstNId).GetDat(Steps[t]) < alpha) InferredNetwork.GetEDat(srcNId, dstNId).GetDat(Steps[t]) = alpha;
+            if (!inferredNetwork.GetEDat(srcNId, dstNId).IsKey(Steps[t])) inferredNetwork.GetEDat(srcNId,dstNId).AddDat(Steps[t]) = alpha * kPi.GetDat(key);
+            else InferredNetwork.GetEDat(srcNId, dstNId).GetDat(Steps[t]) += alpha * kPi.GetDat(key);
+            //else if (InferredNetwork.GetEDat(srcNId, dstNId).GetDat(Steps[t]) < alpha) InferredNetwork.GetEDat(srcNId, dstNId).GetDat(Steps[t]) = alpha;
          }
       }   
    }

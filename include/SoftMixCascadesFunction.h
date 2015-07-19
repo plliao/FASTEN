@@ -43,6 +43,7 @@ class SoftMixCascadesFunction : public PGDFunction<SoftMixCascadesParameter> {
    public:
       TFlt loss(Datum datum) const;
       SoftMixCascadesParameter& gradient(Datum datum);
+      void calculateRMSProp(TFlt, SoftMixCascadesParameter&, SoftMixCascadesParameter&);
       void set(SoftMixCascadesFunctionConfigure configure);
       void init(Data data);
       void initParameter() { parameter.initParameter();}

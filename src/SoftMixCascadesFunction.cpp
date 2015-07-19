@@ -41,7 +41,7 @@ TFlt SoftMixCascadesFunction::loss(Datum datum) const {
    //delete[] lossTable;
 
    //printf("datum:%d, Myloss:%f\n",datum.index(), totalLoss());
-   return -1.0 * totalLoss;
+   return totalLoss;
 }
 
 SoftMixCascadesParameter& SoftMixCascadesFunction::gradient(Datum datum) {
@@ -130,6 +130,37 @@ SoftMixCascadesParameter& SoftMixCascadesFunction::gradient(Datum datum) {
    }
    
    return parameterGrad;
+}
+
+static void updateRMSProp(TFlt alpha, THash<TIntPr,TFlt>& lr, THash<TIntPr,TFlt>& gradient) {
+   for(THash<TIntPr,TFlt>::TIter GI = gradient.BegI(); !GI.IsEnd(); GI++) {
+      TIntPr key = GI.GetKey();
+      if (!lr.IsKey(key)) lr.AddDat(key, TMath::Sqrt(GI.GetDat() * GI.GetDat()));
+      else lr.GetDat(key) = TMath::Sqrt(alpha * lr.GetDat(key) * lr.GetDat(key) + (1.0 - alpha) * GI.GetDat() * GI.GetDat());
+      GI.GetDat() /= lr.GetDat(key);
+   }
+}
+
+static void updateRMSProp(TFlt alpha, THash<TInt,TFlt>& lr, THash<TInt,TFlt>& gradient) {
+   for(THash<TInt,TFlt>::TIter GI = gradient.BegI(); !GI.IsEnd(); GI++) {
+      TInt key = GI.GetKey();
+      if (!lr.IsKey(key)) lr.AddDat(key, TMath::Sqrt(GI.GetDat() * GI.GetDat()));
+      else lr.GetDat(key) = TMath::Sqrt(alpha * lr.GetDat(key) * lr.GetDat(key) + (1.0 - alpha) * GI.GetDat() * GI.GetDat());
+      GI.GetDat() /= lr.GetDat(key);
+   }
+}
+
+void SoftMixCascadesFunction::calculateRMSProp(TFlt alpha, SoftMixCascadesParameter& lr, SoftMixCascadesParameter& gradient) {
+  /*for (THash<TInt, THash<TIntPr,TFlt> >::TIter AI = gradient.kAlphas.BegI(); !AI.IsEnd(); AI++) {
+     if (!lr.kAlphas.IsKey(AI.GetKey())) lr.kAlphas.AddDat(AI.GetKey(), THash<TIntPr,TFlt>());
+     updateRMSProp(alpha, lr.kAlphas.GetDat(AI.GetKey()), AI.GetDat());
+  }*/
+ 
+  for (THash<TInt, THash<TInt,TFlt> >::TIter NI = gradient.cascadesWeights.BegI(); !NI.IsEnd(); NI++) {
+     if (!lr.cascadesWeights.IsKey(NI.GetKey())) lr.cascadesWeights.AddDat(NI.GetKey(), THash<TInt,TFlt>());
+     updateRMSProp(alpha, lr.cascadesWeights.GetDat(NI.GetKey()), NI.GetDat());
+  } 
+  
 }
 
 void SoftMixCascadesFunction::set(SoftMixCascadesFunctionConfigure configure) {

@@ -29,6 +29,7 @@ class NodeSoftMixCascadesModel {
       void LoadGroundTruthTxt(const TStr& InFNm);
       void SaveInferred(const TStr& OutFNm);
       void SaveWeights(const TStr& OutFNm);
+      void ReadWeights(const TStr& OutFNm);
 
       void GenCascade(TCascade& c);
       void GenerateGroundTruth(const int& TNetwork, const int& NNodes, const int& NEdges, const TStr& NetworkParams);

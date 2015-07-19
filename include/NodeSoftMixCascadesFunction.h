@@ -42,6 +42,7 @@ class NodeSoftMixCascadesFunction : public PGDFunction<NodeSoftMixCascadesParame
    public:
       TFlt loss(Datum datum) const;
       NodeSoftMixCascadesParameter& gradient(Datum datum);
+      void calculateRMSProp(TFlt, NodeSoftMixCascadesParameter&, NodeSoftMixCascadesParameter&);
       void set(NodeSoftMixCascadesFunctionConfigure configure);
       void init(Data data, TInt NodeNm = 0);
       void initWeightParameter() { parameter.initWeightParameter();}
