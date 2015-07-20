@@ -1,6 +1,6 @@
 #include <NodeSoftMixCascadesFunction.h>
 
-TFlt NodeSoftMixCascadesFunction::loss(Datum datum) const {
+TFlt NodeSoftMixCascadesFunction::JointLikelihood(Datum datum, TInt latentVariable) const {
    double CurrentTime = datum.time;
    TCascade &Cascade = datum.cascH.GetDat(datum.index);
    THash<TInt, TNodeInfo> &NodeNmH = datum.NodeNmH;
@@ -9,7 +9,6 @@ TFlt NodeSoftMixCascadesFunction::loss(Datum datum) const {
    TInt startNId = Cascade.BegI().GetKey();
 
    int nodeSize = NodeNmH.Len();
-   //float *lossTable = new float[nodeSize];
    #pragma omp parallel for reduction(+:totalLoss)
    for (int i=0;i<nodeSize;i++) {
       TInt key = NodeNmH.GetKey(i);
@@ -27,7 +26,7 @@ TFlt NodeSoftMixCascadesFunction::loss(Datum datum) const {
 
          if (!shapingFunction->Before(srcTime,dstTime)) break; 
                         
-         TFlt alpha = GetAlpha(srcNId, dstNId, startNId);
+         TFlt alpha = GetTopicAlpha(srcNId, dstNId, latentVariable);
 
          sumInLog += alpha * shapingFunction->Value(srcTime,dstTime);
          val += alpha * shapingFunction->Integral(srcTime,dstTime);
@@ -39,34 +38,42 @@ TFlt NodeSoftMixCascadesFunction::loss(Datum datum) const {
       totalLoss += lossValue;
    }
 
-   //for (int i=0;i<nodeSize;i++) totalLoss += lossTable[i];
-   //delete[] lossTable;
-
    //printf("datum:%d, Myloss:%f\n",datum.index(), totalLoss());
-   return totalLoss;
+   TFlt logPi = TMath::Log(parameter.nodeWeights.GetDat(startNId).GetDat(latentVariable));
+   return logPi - totalLoss;
 }
 
 NodeSoftMixCascadesParameter& NodeSoftMixCascadesFunction::gradient(Datum datum) {
-
    double CurrentTime = datum.time;
    TCascade &Cascade = datum.cascH.GetDat(datum.index);
    THash<TInt, TNodeInfo> &NodeNmH = datum.NodeNmH;
-   TInt startNId = Cascade.BegI().GetKey();
  
-   THash<TInt, TFlt>& weight = parameter.nodeWeights.GetDat(startNId);
-   int nodeSize = NodeNmH.Len();
-
    parameterGrad.reset();
+   TInt startNId = Cascade.BegI().GetKey();
+   if (!parameterGrad.nodeWeights.IsKey(startNId)) {
+      parameterGrad.nodeWeights.AddDat(startNId, THash<TInt,TFlt>());
+      parameterGrad.nodeSampledTimes.AddDat(startNId, 0.0);
+      THash<TInt, TFlt>& weight = parameterGrad.nodeWeights.GetDat(startNId);
+      for (TInt i = 0; i < parameter.latentVariableSize; i++) {
+         weight.AddDat(i, 0.0);
+      }
+   }
+
+   THash<TInt, TFlt>& weight = parameterGrad.nodeWeights.GetDat(startNId);
    for (TInt i = 0; i < parameter.latentVariableSize; i++) {
       parameterGrad.kAlphas.AddDat(i, THash<TIntPr, TFlt>());
+      weight.GetDat(i) += latentDistributions.GetDat(datum.index).GetDat(i);
    }
-   parameterGrad.nodeWeights.AddDat(startNId, THash<TInt, TFlt>());
+   parameterGrad.nodeSampledTimes.GetDat(startNId)++;
 
+   int nodeSize = NodeNmH.Len();
    #pragma omp parallel for
    for (int i=0; i<nodeSize; i++) {
       TInt dstNId = NodeNmH.GetKey(i), srcNId;
-      TFlt sumInLog = 0.0, val = 0.0;
       TFlt dstTime, srcTime;
+      THash<TInt,TFlt> dstAlphas;
+
+      for (TInt i = 0; i < parameter.latentVariableSize; i++) dstAlphas.AddDat(i, 0.0);
 
       if (Cascade.IsNode(dstNId) && Cascade.GetTm(dstNId) <= CurrentTime) {
          dstTime = Cascade.GetTm(dstNId);
@@ -76,22 +83,17 @@ NodeSoftMixCascadesParameter& NodeSoftMixCascadesFunction::gradient(Datum datum)
 
             if (!shapingFunction->Before(srcTime,dstTime)) break; 
                          
-            TFlt alpha = 0.0;
             for (TInt i = 0; i < parameter.latentVariableSize; i++) {
-               TFlt value = parameter.GetTopicAlpha(srcNId, dstNId, i);
-               alpha += value * weight.GetDat(i);
+               TFlt alpha = parameter.GetTopicAlpha(srcNId, dstNId, i);
+               dstAlphas.GetDat(i) += alpha * shapingFunction->Value(srcTime,dstTime);
+               //printf("sumInLog:%f, alpha:%f, val:%f, initAlpha:%f\n",sumInLog(),alpha(),shapingFunction->Value(srcTime,dstTime)(),parameter.InitAlpha());
             }
-   
-            sumInLog += alpha * shapingFunction->Value(srcTime,dstTime);
-            //printf("sumInLog:%f, alpha:%f, val:%f, initAlpha:%f\n",sumInLog(),alpha(),shapingFunction->Value(srcTime,dstTime)(),parameter.InitAlpha());
          }
       }
       else dstTime = Cascade.GetMaxTm() + observedWindow;
    
-      THash<TInt, TFlt> weightGradient;
       THash<TInt, THash<TIntPr, TFlt> > kAlphasGradient;
       for (TInt i = 0; i < parameter.latentVariableSize; i++) {
-         weightGradient.AddDat(i, 0.0);
          kAlphasGradient.AddDat(i, THash<TIntPr, TFlt>());
       }
 
@@ -102,22 +104,21 @@ NodeSoftMixCascadesParameter& NodeSoftMixCascadesFunction::gradient(Datum datum)
          if (!shapingFunction->Before(srcTime,dstTime)) break; 
                            
          TIntPr alphaIndex; alphaIndex.Val1 = srcNId; alphaIndex.Val2 = dstNId;
-         if (Cascade.IsNode(dstNId) && Cascade.GetTm(dstNId) <= CurrentTime)
-            val = shapingFunction->Integral(srcTime,dstTime) - shapingFunction->Value(srcTime,dstTime)/sumInLog;
-         else
-            val = shapingFunction->Integral(srcTime,dstTime);
-         
+         TFlt val = 0.0;
+
          for (TInt i = 0; i < parameter.latentVariableSize; i++) {
+            if (Cascade.IsNode(dstNId) && Cascade.GetTm(dstNId) <= CurrentTime)
+               val = shapingFunction->Integral(srcTime,dstTime) - shapingFunction->Value(srcTime,dstTime) / dstAlphas.GetDat(i);
+            else
+               val = shapingFunction->Integral(srcTime,dstTime);
             THash<TIntPr, TFlt>& alphaGradient = kAlphasGradient.GetDat(i);
-            alphaGradient.AddDat(alphaIndex, val * weight.GetDat(i));
-            weightGradient.GetDat(i) += val * parameter.GetTopicAlpha(srcNId, dstNId, i);
+            alphaGradient.AddDat(alphaIndex, val * latentDistributions.GetDat(datum.index).GetDat(i));
          }
          //printf("index:%d, %d,%d: gradient:%f, shapingVal:%f, sumInLog:%f\n",datum.index(),srcNId(),dstNId(),val(),shapingFunction->Integral(srcTime,dstTime)(),sumInLog()); 
       }
 
       #pragma omp critical 
       {
-         THash<TInt, TFlt>& weight = parameterGrad.nodeWeights.GetDat(startNId);
          for (TInt i = 0; i < parameter.latentVariableSize; i++) {
             THash<TIntPr, TFlt>& alphaGradient = kAlphasGradient.GetDat(i);
             THash<TIntPr, TFlt>& alpha = parameterGrad.kAlphas.GetDat(i);
@@ -125,12 +126,8 @@ NodeSoftMixCascadesParameter& NodeSoftMixCascadesFunction::gradient(Datum datum)
                if (alpha.IsKey(AI.GetKey())) alpha.GetDat(AI.GetKey()) += AI.GetDat();
                else alpha.AddDat(AI.GetKey(), AI.GetDat());
             }
-
-            if (weight.IsKey(i)) weight.GetDat(i) += weightGradient.GetDat(i);
-            else weight.AddDat(i, weightGradient.GetDat(i));
          }
       }
-
    }
    
    return parameterGrad;
@@ -156,16 +153,23 @@ static void updateRMSProp(TFlt alpha, THash<TInt,TFlt>& lr, THash<TInt,TFlt>& gr
 }
 
 void NodeSoftMixCascadesFunction::calculateRMSProp(TFlt alpha, NodeSoftMixCascadesParameter& lr, NodeSoftMixCascadesParameter& gradient) {
-  /*for (THash<TInt, THash<TIntPr,TFlt> >::TIter AI = gradient.kAlphas.BegI(); !AI.IsEnd(); AI++) {
+  for (THash<TInt, THash<TIntPr,TFlt> >::TIter AI = gradient.kAlphas.BegI(); !AI.IsEnd(); AI++) {
      if (!lr.kAlphas.IsKey(AI.GetKey())) lr.kAlphas.AddDat(AI.GetKey(), THash<TIntPr,TFlt>());
      updateRMSProp(alpha, lr.kAlphas.GetDat(AI.GetKey()), AI.GetDat());
-  }*/
- 
-  for (THash<TInt, THash<TInt,TFlt> >::TIter NI = gradient.nodeWeights.BegI(); !NI.IsEnd(); NI++) {
-     if (!lr.nodeWeights.IsKey(NI.GetKey())) lr.nodeWeights.AddDat(NI.GetKey(), THash<TInt,TFlt>());
-     updateRMSProp(alpha, lr.nodeWeights.GetDat(NI.GetKey()), NI.GetDat());
-  } 
-  
+  }
+}
+
+void NodeSoftMixCascadesFunction::maximize() {
+   for (THash<TInt,THash<TInt,TFlt> >::TIter WI = parameterGrad.nodeWeights.BegI(); !WI.IsEnd(); WI++) {
+      THash<TInt,TFlt>& weight = parameter.nodeWeights.GetDat(WI.GetKey());
+      TFlt& times = parameterGrad.nodeSampledTimes.GetDat(WI.GetKey());
+      for (THash<TInt,TFlt>::TIter VI = WI.GetDat().BegI(); !VI.IsEnd(); VI++) {
+         weight.GetDat(VI.GetKey()) = VI.GetDat() / times;
+         if (weight.GetDat(VI.GetKey()) < 0.001) weight.GetDat(VI.GetKey()) = 0.001; 
+         VI.GetDat() = 0.0;
+      }
+      times = 0.0;
+   }
 }
 
 void NodeSoftMixCascadesFunction::set(NodeSoftMixCascadesFunctionConfigure configure) {
@@ -229,7 +233,6 @@ void NodeSoftMixCascadesParameter::initAlphaParameter() {
 
 void NodeSoftMixCascadesParameter::reset() {
    kAlphas.Clr();
-   nodeWeights.Clr();
 }
 
 NodeSoftMixCascadesParameter& NodeSoftMixCascadesParameter::operator = (const NodeSoftMixCascadesParameter& p) {
@@ -239,19 +242,13 @@ NodeSoftMixCascadesParameter& NodeSoftMixCascadesParameter::operator = (const No
 
    nodeWeights.Clr();
    nodeWeights = p.nodeWeights;
+
+   nodeSampledTimes.Clr();
+   nodeSampledTimes = p.nodeSampledTimes; 
    return *this;
 }
 
 NodeSoftMixCascadesParameter& NodeSoftMixCascadesParameter::operator += (const NodeSoftMixCascadesParameter& p) {
-   for (THash<TInt,THash<TInt,TFlt> >::TIter CI = p.nodeWeights.BegI(); !CI.IsEnd(); CI++) {
-      if (!nodeWeights.IsKey(CI.GetKey())) nodeWeights.AddDat(CI.GetKey(), THash<TInt,TFlt>());
-      THash<TInt,TFlt>& weight = nodeWeights.GetDat(CI.GetKey());
-
-      for (THash<TInt,TFlt>::TIter VI = CI.GetDat().BegI(); !VI.IsEnd(); VI++) {
-         if (weight.IsKey(VI.GetKey())) weight.GetDat(VI.GetKey()) += VI.GetDat();
-         else weight.AddDat(VI.GetKey(), VI.GetDat());
-      }
-   }
    for(THash<TInt, THash<TIntPr, TFlt> >::TIter AI = p.kAlphas.BegI(); !AI.IsEnd(); AI++) {
       TInt key = AI.GetKey();
       if (!kAlphas.IsKey(key)) {
@@ -274,9 +271,6 @@ NodeSoftMixCascadesParameter& NodeSoftMixCascadesParameter::operator *= (const T
    for(THash<TInt, THash<TIntPr,TFlt> >::TIter AI = kAlphas.BegI(); !AI.IsEnd(); AI++) {
       THash<TIntPr, TFlt>& alphas = AI.GetDat();
       for (THash<TIntPr,TFlt>::TIter aI = alphas.BegI(); !aI.IsEnd(); aI++) aI.GetDat() *= multiplier;
-   }
-   for (THash<TInt,THash<TInt,TFlt> >::TIter CI = nodeWeights.BegI(); !CI.IsEnd(); CI++) {
-      for (THash<TInt,TFlt>::TIter VI = CI.GetDat().BegI(); !VI.IsEnd(); VI++) VI.GetDat() *= multiplier;
    }
    return *this;
 }
@@ -301,24 +295,6 @@ NodeSoftMixCascadesParameter& NodeSoftMixCascadesParameter::projectedlyUpdateGra
          //printf("topic: %d, %d,%d: alpha %f -> %f , gradient %f\n", key(), alphaIndex.Val1(), alphaIndex.Val2(), value(), alpha(), alphaGradient());
       }
    }
-
-   for (THash<TInt,THash<TInt,TFlt> >::TIter CI = p.nodeWeights.BegI(); !CI.IsEnd(); CI++) {
-      THash<TInt,TFlt>& weight = nodeWeights.GetDat(CI.GetKey());
-
-      TFlt sum = 0.0, C = 0.1;
-      for (THash<TInt,TFlt>::TIter VI = weight.BegI(); !VI.IsEnd(); VI++) sum += VI.GetDat();
-
-      for (THash<TInt,TFlt>::TIter VI = CI.GetDat().BegI(); !VI.IsEnd(); VI++) {
-
-         TFlt value = weight.GetDat(VI.GetKey()), gradient = VI.GetDat() + C * (sum - 1.0);
-         value -= gradient;
-         
-         if (value < 0.0) value = 0.001;
-         if (value > 1.0) value = 1.000;
-
-         weight.GetDat(VI.GetKey()) = value;
-      }
-   }
    return *this;
 }
 
@@ -329,14 +305,10 @@ TFlt NodeSoftMixCascadesParameter::GetTopicAlpha(TInt srcNId, TInt dstNId, TInt 
    return InitAlpha;
 }
 
-TFlt NodeSoftMixCascadesParameter::GetAlpha(TInt srcNId, TInt dstNId, TInt NId) const {
-  if (!nodeWeights.IsKey(NId)) return 0.0;
-  const THash<TInt, TFlt>& weight = nodeWeights.GetDat(NId);
-
-  TFlt alpha = 0.0; 
-  for (THash<TInt, THash<TIntPr,TFlt> >::TIter AI = kAlphas.BegI(); !AI.IsEnd(); AI++) {
-     TIntPr index(srcNId,dstNId);
-     if (AI.GetDat().IsKey(index)) alpha += AI.GetDat().GetDat(index) * weight.GetDat(AI.GetKey());
-  }
-  return alpha;
+TFlt NodeSoftMixCascadesParameter::GetAlpha(TInt srcNId, TInt dstNId, TInt topic) const {
+  const THash<TIntPr,TFlt>& alphas = kAlphas.GetDat(topic);
+  TFlt alpha = 0.0;
+  TIntPr index(srcNId,dstNId);
+  if (!alphas.IsKey(index)) return alpha;
+  return alphas.GetDat(index); 
 }

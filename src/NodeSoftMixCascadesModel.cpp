@@ -75,6 +75,18 @@ void NodeSoftMixCascadesModel::GenCascade(TCascade& C) {
 		StartNId = Network.GetRndNId();
 		InfectedNIdH.AddDat(StartNId) = GlobalTime;
 
+                THash<TInt,TFlt>& weight = lossFunction.parameter.nodeWeights.GetDat(StartNId);
+                TInt topic = -1;
+                TFlt sampledValue = TFlt::Rnd.GetUniDev();
+                for (THash<TInt,TFlt>::TIter VI = weight.BegI(); !VI.IsEnd(); VI++) {
+                   sampledValue -= VI.GetDat();
+                   if (sampledValue <= 0.0) {
+                      topic = VI.GetKey();
+                      break;
+                   }
+                }
+                //printf("start NId %d, topic %d\n", StartNId, topic());
+
 		while (true) {
 			// sort by time & get the oldest node that did not run infection
 			InfectedNIdH.SortByDat(true);
@@ -100,7 +112,7 @@ void NodeSoftMixCascadesModel::GenCascade(TCascade& C) {
 				   TFltFltH& Alphas = Network.GetEDat(NId, DstNId);
 				   for (int j=0; j<Alphas.Len() && Alphas.GetKey(j)<GlobalTime; j++) { alpha = Alphas[j]; }
                                 }
-				else alpha = (double)lossFunction.GetAlpha(NId, DstNId, StartNId);
+				else alpha = (double)lossFunction.GetAlpha(NId, DstNId, topic);
 				if (verbose) { printf("GlobalTime:%f, nodes:%d->%d, alpha:%f\n", GlobalTime, NId, DstNId, alpha); }
 
 				if (alpha <= edgeInfo.MinAlpha) { continue; }
@@ -276,7 +288,7 @@ void NodeSoftMixCascadesModel::Infer(const TFltV& Steps, const TStr& OutFNm) {
          nodeSoftMixCascadesFunctionConfigure.shapingFunction = new EXPShapingFunction(); 
    } 
    lossFunction.set(nodeSoftMixCascadesFunctionConfigure);
-   pgd.set(eMConfigure.pGDConfigure);
+   em.set(eMConfigure);
    TIntFltH CascadesPositions;
    Data data = {nodeInfo.NodeNmH, CascH, CascadesPositions, 0.0};
    lossFunction.init(data);
@@ -286,8 +298,9 @@ void NodeSoftMixCascadesModel::Infer(const TFltV& Steps, const TStr& OutFNm) {
    outName.SplitOnCh(expName, '-', modelName);
    //ReadWeights("data/" + expName + "_Weights.txt");
    lossFunction.initWeightParameter();
+   lossFunction.InitLatentVariable(data, eMConfigure);
   
-   printf("Soft Mix Cascades initialization done\n");
+   printf("Node Soft Mix Cascades initialization done\n");
    fflush(stdout);
  
    TSampling Sampling = eMConfigure.pGDConfigure.sampling;
@@ -304,7 +317,7 @@ void NodeSoftMixCascadesModel::Infer(const TFltV& Steps, const TStr& OutFNm) {
          }
       }
       Data data = {nodeInfo.NodeNmH, CascH, CascadesPositions, Steps[t]};
-      pgd.Optimize(lossFunction, data);
+      em.Optimize(lossFunction, data);
 
       const THash<TInt, THash<TIntPr, TFlt> >& kAlphas = lossFunction.getParameter().kAlphas;
 

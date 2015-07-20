@@ -58,6 +58,15 @@ SoftMixCascadesParameter& SoftMixCascadesFunction::gradient(Datum datum) {
    THash<TInt, TFlt>& weight = parameter.cascadesWeights.GetDat(datum.index);
    int nodeSize = NodeNmH.Len();
 
+   TFlt maxValue = -DBL_MAX;
+   TInt updatedTopic = -1;
+   for (TInt i = 0; i < parameter.latentVariableSize; i++) {
+      if (weight.GetDat(i) > maxValue) {
+         maxValue = weight.GetDat(i);
+         updatedTopic = i;
+      }
+   }
+
    #pragma omp parallel for
    for (int i=0; i<nodeSize; i++) {
       TInt dstNId = NodeNmH.GetKey(i), srcNId;
@@ -104,8 +113,10 @@ SoftMixCascadesParameter& SoftMixCascadesFunction::gradient(Datum datum) {
             val = shapingFunction->Integral(srcTime,dstTime);
          
          for (TInt i = 0; i < parameter.latentVariableSize; i++) {
-            THash<TIntPr, TFlt>& alphaGradient = kAlphasGradient.GetDat(i);
-            alphaGradient.AddDat(alphaIndex, val * weight.GetDat(i));
+            if (i==updatedTopic) {
+               THash<TIntPr, TFlt>& alphaGradient = kAlphasGradient.GetDat(i);
+               alphaGradient.AddDat(alphaIndex, val * weight.GetDat(i));
+            }
             weightGradient.GetDat(i) += val * parameter.GetTopicAlpha(srcNId, dstNId, i);
          }
          //printf("index:%d, %d,%d: gradient:%f, shapingVal:%f, sumInLog:%f\n",datum.index(),srcNId(),dstNId(),val(),shapingFunction->Integral(srcTime,dstTime)(),sumInLog()); 

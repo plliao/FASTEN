@@ -35,6 +35,7 @@ int main(int argc, char* argv[]) {
 
   const TSampling TSam = (TSampling)Env.GetIfArgPrefixInt("-t:", 0, "Sampling method\n0:UNIF_SAMPLING, 1:WIN_SAMPLING, 2:EXP_SAMPLING, 3:WIN_EXP_SAMPLING, 4:RAY_SAMPLING");
   const int Iters  = Env.GetIfArgPrefixInt("-e:", 1000, "Number of iterations per time step");
+  const int EMIters  = Env.GetIfArgPrefixInt("-em:", 5, "Number of iterations of expectation maximization");
   const int BatchLen = Env.GetIfArgPrefixInt("-bl:", 1, "Number of cascades for each batch, -t:2 & -t:4 (default:1000)");
   const TStr ParamSampling = Env.GetIfArgPrefixStr("-sd:", "0.1", "Params for -t:1,2 & -t:4,5 (default:0.1)\n");
 
@@ -60,6 +61,7 @@ int main(int argc, char* argv[]) {
   nodeSoftMixCascades.SetDelta(Delta);
   nodeSoftMixCascades.SetSampling(TSam);
   nodeSoftMixCascades.SetMaxIterNm(Iters);
+  nodeSoftMixCascades.SetMaxEMIterNm(EMIters);
   nodeSoftMixCascades.SetBatchSize(BatchLen);
   nodeSoftMixCascades.SetLearningRate(lr);
   nodeSoftMixCascades.SetParamSampling(ParamSampling);

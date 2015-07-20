@@ -1,7 +1,7 @@
 #ifndef MMRATEPARAMETER_H
 #define MMRATEPARAMETER_H
 
-#include <PGD.h>
+#include <EM.h>
 #include <TimeShapingFunction.h>
 
 typedef struct {
@@ -36,18 +36,21 @@ class NodeSoftMixCascadesParameter {
       TInt latentVariableSize;   
       THash<TInt, THash<TIntPr,TFlt> > kAlphas;
       THash<TInt, THash<TInt, TFlt> > nodeWeights;
+      THash<TInt, TFlt> nodeSampledTimes;
 };
 
-class NodeSoftMixCascadesFunction : public PGDFunction<NodeSoftMixCascadesParameter> {
+class NodeSoftMixCascadesFunction : public EMLikelihoodFunction<NodeSoftMixCascadesParameter> {
    public:
-      TFlt loss(Datum datum) const;
+      TFlt JointLikelihood(Datum datum, TInt latentVariable) const;
+      void maximize() ;
       NodeSoftMixCascadesParameter& gradient(Datum datum);
       void calculateRMSProp(TFlt, NodeSoftMixCascadesParameter&, NodeSoftMixCascadesParameter&);
       void set(NodeSoftMixCascadesFunctionConfigure configure);
       void init(Data data, TInt NodeNm = 0);
       void initWeightParameter() { parameter.initWeightParameter();}
       void initAlphaParameter() { parameter.initAlphaParameter();}
-      TFlt GetAlpha(TInt srcNId, TInt dstNId, TInt NId) const { return parameter.GetAlpha(srcNId, dstNId, NId);}
+      TFlt GetTopicAlpha(TInt srcNId, TInt dstNId, TInt topic) const { return parameter.GetTopicAlpha(srcNId, dstNId, topic);}
+      TFlt GetAlpha(TInt srcNId, TInt dstNId, TInt topic) const { return parameter.GetAlpha(srcNId, dstNId, topic);}
 
       TimeShapingFunction *shapingFunction; 
       TFlt observedWindow;

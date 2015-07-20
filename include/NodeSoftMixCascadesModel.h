@@ -3,7 +3,6 @@
 
 #include <cascdynetinf.h>
 #include <InfoPathFileIO.h>
-#include <PGD.h>
 #include <EM.h>
 #include <NodeSoftMixCascadesFunction.h>
 #include <TimeShapingFunction.h>
@@ -23,7 +22,7 @@ class NodeSoftMixCascadesModel {
       NodeSoftMixCascadesFunction lossFunction;
 
       EMConfigure eMConfigure;
-      PGD<NodeSoftMixCascadesParameter> pgd;
+      EM<NodeSoftMixCascadesParameter> em;
 
       void LoadCascadesTxt(const TStr& InFNm);
       void LoadGroundTruthTxt(const TStr& InFNm);
@@ -48,6 +47,7 @@ class NodeSoftMixCascadesModel {
       void SetSampling(const TSampling sampling) { eMConfigure.pGDConfigure.sampling = sampling;} 
       void SetParamSampling(const TStr paramSampling) { eMConfigure.pGDConfigure.ParamSampling = paramSampling;}
       void SetMaxIterNm(const size_t maxIterNm) { eMConfigure.pGDConfigure.maxIterNm = maxIterNm;}
+      void SetMaxEMIterNm(const size_t maxIterNm) { eMConfigure.maxIterNm = maxIterNm;}
 
       void SetAging(const double& aging) { Aging = aging; }
       void SetRegularizer(const TRegularizer& reg) { nodeSoftMixCascadesFunctionConfigure.Regularizer = reg; }
