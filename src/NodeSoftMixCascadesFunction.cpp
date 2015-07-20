@@ -129,7 +129,8 @@ NodeSoftMixCascadesParameter& NodeSoftMixCascadesFunction::gradient(Datum datum)
          }
       }
    }
-   
+   //calculateRMSProp(0.1, learningRate, parameterGrad);   
+
    return parameterGrad;
 }
 
@@ -143,14 +144,14 @@ static void updateRMSProp(TFlt alpha, THash<TIntPr,TFlt>& lr, THash<TIntPr,TFlt>
    }
 }
 
-static void updateRMSProp(TFlt alpha, THash<TInt,TFlt>& lr, THash<TInt,TFlt>& gradient) {
+/*static void updateRMSProp(TFlt alpha, THash<TInt,TFlt>& lr, THash<TInt,TFlt>& gradient) {
    for(THash<TInt,TFlt>::TIter GI = gradient.BegI(); !GI.IsEnd(); GI++) {
       TInt key = GI.GetKey();
       if (!lr.IsKey(key)) lr.AddDat(key, TMath::Sqrt(GI.GetDat() * GI.GetDat()));
       else lr.GetDat(key) = TMath::Sqrt(alpha * lr.GetDat(key) * lr.GetDat(key) + (1.0 - alpha) * GI.GetDat() * GI.GetDat());
       GI.GetDat() /= lr.GetDat(key);
    }
-}
+}*/
 
 void NodeSoftMixCascadesFunction::calculateRMSProp(TFlt alpha, NodeSoftMixCascadesParameter& lr, NodeSoftMixCascadesParameter& gradient) {
   for (THash<TInt, THash<TIntPr,TFlt> >::TIter AI = gradient.kAlphas.BegI(); !AI.IsEnd(); AI++) {
@@ -175,6 +176,7 @@ void NodeSoftMixCascadesFunction::maximize() {
       //printf("\n");
       times = 0.0;
    }
+   //learningRate.kAlphas.Clr();
 }
 
 void NodeSoftMixCascadesFunction::set(NodeSoftMixCascadesFunctionConfigure configure) {

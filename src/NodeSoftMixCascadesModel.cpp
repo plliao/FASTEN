@@ -130,7 +130,7 @@ void NodeSoftMixCascadesModel::GenCascade(TCascade& C) {
 				case POW:
 					// power-law with alpha parameter
 					sigmaT = TInt::Rnd.GetPowerDev(1+alpha);
-					while (sigmaT < Delta) { sigmaT = TFlt::Rnd.GetPowerDev(1+alpha); }
+					while (sigmaT < Delta) { sigmaT = Delta * TFlt::Rnd.GetPowerDev(1+alpha); }
 					break;
 				case RAY:
 					// rayleigh with alpha parameter

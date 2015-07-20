@@ -54,6 +54,7 @@ class NodeSoftMixCascadesFunction : public EMLikelihoodFunction<NodeSoftMixCasca
 
       TimeShapingFunction *shapingFunction; 
       TFlt observedWindow;
+      //NodeSoftMixCascadesParameter learningRate;
 };
 
 #endif
