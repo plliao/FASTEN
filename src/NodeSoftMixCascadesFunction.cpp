@@ -38,8 +38,8 @@ TFlt NodeSoftMixCascadesFunction::JointLikelihood(Datum datum, TInt latentVariab
       totalLoss += lossValue;
    }
 
-   //printf("datum:%d, Myloss:%f\n",datum.index(), totalLoss());
    TFlt logPi = TMath::Log(parameter.nodeWeights.GetDat(startNId).GetDat(latentVariable));
+   //printf("datum:%d, Myloss:%f, logPi:%f\n",datum.index(), totalLoss, logPi());
    return logPi - totalLoss;
 }
 
@@ -163,11 +163,16 @@ void NodeSoftMixCascadesFunction::maximize() {
    for (THash<TInt,THash<TInt,TFlt> >::TIter WI = parameterGrad.nodeWeights.BegI(); !WI.IsEnd(); WI++) {
       THash<TInt,TFlt>& weight = parameter.nodeWeights.GetDat(WI.GetKey());
       TFlt& times = parameterGrad.nodeSampledTimes.GetDat(WI.GetKey());
+      if (times == 0.0) continue;
+      //printf("node %d, times %f, ", WI.GetKey()(), times());
       for (THash<TInt,TFlt>::TIter VI = WI.GetDat().BegI(); !VI.IsEnd(); VI++) {
+         //printf("topic %d, value %f, ", VI.GetKey()(), VI.GetDat()());
          weight.GetDat(VI.GetKey()) = VI.GetDat() / times;
          if (weight.GetDat(VI.GetKey()) < 0.001) weight.GetDat(VI.GetKey()) = 0.001; 
          VI.GetDat() = 0.0;
+         //printf(" weight %f\t", weight.GetDat(VI.GetKey())());
       }
+      //printf("\n");
       times = 0.0;
    }
 }

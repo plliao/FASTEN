@@ -125,16 +125,16 @@ void NodeSoftMixCascadesModel::GenCascade(TCascade& C) {
 				switch (nodeInfo.Model) {
 				case EXP:
 					// exponential with alpha parameter
-					sigmaT = TInt::Rnd.GetExpDev(alpha);
+					sigmaT = TFlt::Rnd.GetExpDev(alpha);
 					break;
 				case POW:
 					// power-law with alpha parameter
 					sigmaT = TInt::Rnd.GetPowerDev(1+alpha);
-					while (sigmaT < Delta) { sigmaT = Delta*TInt::Rnd.GetPowerDev(1+alpha); }
+					while (sigmaT < Delta) { sigmaT = TFlt::Rnd.GetPowerDev(1+alpha); }
 					break;
 				case RAY:
 					// rayleigh with alpha parameter
-					sigmaT = TInt::Rnd.GetRayleigh(1/sqrt(alpha));
+					sigmaT = TFlt::Rnd.GetRayleigh(1/sqrt(alpha));
 					break;
 				default:
 					sigmaT = 1;
