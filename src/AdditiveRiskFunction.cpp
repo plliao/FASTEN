@@ -2,6 +2,7 @@
 
 void AdditiveRiskFunction::set(AdditiveRiskFunctionConfigure configure) {
    shapingFunction = configure.shapingFunction;
+   observedWindow = configure.observedWindow;
    parameter.set(configure);
 }
 
@@ -171,42 +172,35 @@ AdditiveRiskParameter::AdditiveRiskParameter() {
 }
 
 AdditiveRiskParameter& AdditiveRiskParameter::operator = (const AdditiveRiskParameter& p) {
-   multiplier = p.multiplier;
    alphas.Clr();
    alphas = p.alphas;
-   //initialAlphas.Clr();
-   //initialAlphas = p.initialAlphas;
    return *this; 
 }
 
 AdditiveRiskParameter& AdditiveRiskParameter::operator += (const AdditiveRiskParameter& p) {
    for (THash<TIntPr,TFlt>::TIter AI = p.alphas.BegI(); !AI.IsEnd(); AI++) {
       TIntPr key = AI.GetKey();
-      TFlt alpha = AI.GetDat() * p.multiplier;
-      if (!alphas.IsKey(key)) alphas.AddDat(key,alpha/multiplier);
-      else alphas.GetDat(key) += alpha/multiplier;
-      //printf("%d,%d: += alpha:%f, m:%f\n", AI.GetDat()key.Val1(), key.Val2(), AI.GetDat(), p.multiplier());
+      TFlt alpha = AI.GetDat();
+      if (!alphas.IsKey(key)) alphas.AddDat(key,alpha);
+      else alphas.GetDat(key) += alpha;
+      //printf("%d,%d: += alpha:%f \n", AI.GetDat()key.Val1(), key.Val2(), AI.GetDat());
    }
-   /*for (THash<TInt,TFlt>::TIter IAI = p.initialAlphas.BegI(); !IAI.IsEnd(); IAI++) {
-      TInt key = IAI.GetKey();
-      TFlt initialAlpha = IAI.GetDat() * p.multiplier;
-      if (!initialAlphas.IsKey(key)) initialAlphas.AddDat(key, initialAlpha/multiplier);
-      else initialAlphas.GetDat(key) += initialAlpha/multiplier;
-   }*/
    return *this; 
 }
 
 AdditiveRiskParameter& AdditiveRiskParameter::operator *= (const TFlt multiplier) {
-   this->multiplier *= multiplier;
+   for (THash<TIntPr,TFlt>::TIter AI = alphas.BegI(); !AI.IsEnd(); AI++) {
+      AI.GetDat() *= multiplier;
+   }
    return *this; 
 }
 
 AdditiveRiskParameter& AdditiveRiskParameter::projectedlyUpdateGradient(const AdditiveRiskParameter& p) {
    for (THash<TIntPr,TFlt>::TIter AI = p.alphas.BegI(); !AI.IsEnd(); AI++) {
       TIntPr key = AI.GetKey();
-      TFlt alphaGradient = AI.GetDat() * p.multiplier, alpha;
+      TFlt alphaGradient = AI.GetDat(), alpha;
       //printf("%d,%d: %f, dat:%f, m:%f\n",key.Val1(),key.Val2(),alpha(),AI.GetDat()(),p.multiplier());
-      if (alphas.IsKey(key)) alpha = alphas.GetDat(key) * multiplier; 
+      if (alphas.IsKey(key)) alpha = alphas.GetDat(key); 
       else alpha = InitAlpha;
 
       alpha -= (alphaGradient + (Regularizer ? Mu : TFlt(0.0)) * alpha);
@@ -214,34 +208,14 @@ AdditiveRiskParameter& AdditiveRiskParameter::projectedlyUpdateGradient(const Ad
       if (alpha < Tol) alpha = Tol;
       if (alpha > MaxAlpha) alpha = MaxAlpha;
 
-      if (!alphas.IsKey(key)) alphas.AddDat(key,alpha/multiplier);
-      else alphas.GetDat(key) = alpha/multiplier;
+      if (!alphas.IsKey(key)) alphas.AddDat(key,alpha);
+      else alphas.GetDat(key) = alpha;
    }
-
-   /*for (THash<TInt,TFlt>::TIter IAI = p.initialAlphas.BegI(); !IAI.IsEnd(); IAI++) {
-      TInt key = IAI.GetKey();
-      TFlt initialAlphaGradient = IAI.GetDat() * p.multiplier, initialAlpha;
-      //printf("%d,%d: %f, dat:%f, m:%f\n",key.Val1(),key.Val2(),alpha(),IAI.GetDat()(),p.multiplier());
-      if (initialAlphas.IsKey(key)) initialAlpha = initialAlphas.GetDat(key) * multiplier; 
-      else initialAlpha = InitAlpha;
-
-      initialAlpha -= (initialAlphaGradient + (Regularizer ? Mu : TFlt(0.0)) * initialAlpha);
-
-      if (initialAlpha < Tol) initialAlpha = Tol;
-      if (initialAlpha > MaxAlpha) initialAlpha = MaxAlpha;
-
-      if (!initialAlphas.IsKey(key)) initialAlphas.AddDat(key,initialAlpha/multiplier);
-      else initialAlphas.GetDat(key) = initialAlpha/multiplier;
-   }*/
-
    return *this; 
 }
 
 void AdditiveRiskParameter::reset() {
-   multiplier = 1.0;
    alphas.Clr();
-   //initialAlphas.Clr();
-   Tol = InitAlpha = MaxAlpha = MinAlpha = 0.0;
 }
 
 void AdditiveRiskParameter::set(AdditiveRiskFunctionConfigure configure) {
@@ -251,18 +225,5 @@ void AdditiveRiskParameter::set(AdditiveRiskFunctionConfigure configure) {
    InitAlpha = configure.InitAlpha;
    MaxAlpha = configure.MaxAlpha;
    MinAlpha = configure.MinAlpha;
-   multiplier = 1.0;
-}
-
-const THash<TIntPr, TFlt>& AdditiveRiskParameter::getAlphas() const {
-   return alphas;
-}
-
-const THash<TInt, TFlt>& AdditiveRiskParameter::getInitialAlphas() const {
-   return initialAlphas;
-}
-
-const TFlt AdditiveRiskParameter::getMultiplier() const {
-   return multiplier;
 }
 

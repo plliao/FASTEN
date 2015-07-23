@@ -14,14 +14,6 @@ void Info::SaveInferred(const TStr& OutFNm) {
    InfoPathFileIO::SaveNetwork(OutFNm, InferredNetwork, nodeInfo, edgeInfo);
 }
 
-void Info::SaveInitialAlphas(const TStr& OutFNm) const {
-   TFOut FOut(OutFNm);
-   const THash<TInt,TFlt>& initialAlphas = lossFunction.getParameter().getInitialAlphas();
-   for (THash<TInt,TFlt>::TIter IAI = initialAlphas.BegI(); !IAI.IsEnd(); IAI++) {
-      FOut.PutStr(TStr::Fmt("%d;%f\n",IAI.GetKey()(),IAI.GetDat()()));
-   }
-}
-
 void Info::Init() {
    for (THash<TInt, TNodeInfo>::TIter NI = nodeInfo.NodeNmH.BegI(); NI < nodeInfo.NodeNmH.EndI(); NI++) {
       InferredNetwork.AddNode(NI.GetKey(), NI.GetDat().Name);
@@ -59,17 +51,18 @@ void Info::Infer(const TFltV& Steps) {
       Data data = {nodeInfo.NodeNmH, CascH, CascadesPositions, Steps[t]};
       pgd.Optimize(lossFunction, data);
 
-      const THash<TIntPr, TFlt> &alphas = lossFunction.getParameter().getAlphas();
-      const TFlt multiplier = lossFunction.getParameter().getMultiplier();
+      const THash<TIntPr, TFlt> &alphas = lossFunction.parameter.alphas;
 
       for (THash<TIntPr, TFlt>::TIter AI = alphas.BegI(); !AI.IsEnd(); AI++) {
          TInt srcNId = AI.GetKey().Val1, dstNId = AI.GetKey().Val2;
 
-         if (!InferredNetwork.IsEdge(srcNId, dstNId)) InferredNetwork.AddEdge(srcNId, dstNId, TFltFltH());
- 
-         TFlt alpha = AI.GetDat() * multiplier;
+         TFlt alpha = AI.GetDat();
          if (InferredNetwork.GetEDat(srcNId, dstNId).IsKey(Steps[t-1]) && alpha == InferredNetwork.GetEDat(srcNId, dstNId).GetDat(Steps[t-1]))
             alpha = alpha * Aging;
+         if (alpha < edgeInfo.MinAlpha) continue;
+         if (alpha > edgeInfo.MaxAlpha) alpha = edgeInfo.MaxAlpha;
+
+         if (!InferredNetwork.IsEdge(srcNId, dstNId)) InferredNetwork.AddEdge(srcNId, dstNId, TFltFltH());
  
          InferredNetwork.GetEDat(srcNId,dstNId).AddDat(Steps[t]) = alpha;          
       }

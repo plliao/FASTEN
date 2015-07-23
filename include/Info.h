@@ -15,8 +15,7 @@ class Info {
       TStrFltFltHNEDNet Network, InferredNetwork;
      
       TFlt Window, TotalTime, Delta; 
-      TFlt Gamma, Mu, Aging;
-      TRegularizer Regularizer;
+      TFlt Gamma, Aging;
 
       AdditiveRiskFunctionConfigure additiveRiskFunctionConfigure;
       AdditiveRiskFunction lossFunction;
@@ -27,11 +26,10 @@ class Info {
       void LoadCascadesTxt(const TStr& InFNm);
       void LoadGroundTruthTxt(const TStr& InFNm);
       void SaveInferred(const TStr& OutFNm);
-      void SaveInitialAlphas(const TStr& OutFNm) const;
 
       void SetModel(const TModel& model) { nodeInfo.Model = model; }
       void SetWindow(const double& window) { Window = window; }
-      void SetObservedWindow(const double& window) { lossFunction.observedWindow = window; }
+      void SetObservedWindow(const double& window) { additiveRiskFunctionConfigure.observedWindow = window; }
       void SetDelta(const double& delta) { Delta = delta; }
 
       void SetLearningRate(const double& lr) { pGDConfigure.learningRate = lr; }
@@ -41,8 +39,8 @@ class Info {
       void SetMaxIterNm(const size_t maxIterNm) { pGDConfigure.maxIterNm = maxIterNm;}
 
       void SetAging(const double& aging) { Aging = aging; }
-      void SetRegularizer(const TRegularizer& reg) { Regularizer = reg; }
-      void SetMu(const double& mu) { Mu = mu; }
+      void SetRegularizer(const TRegularizer& reg) { additiveRiskFunctionConfigure.Regularizer = reg; }
+      void SetMu(const double& mu) { additiveRiskFunctionConfigure.Mu = mu; }
       void SetTolerance(const double& tol) { additiveRiskFunctionConfigure.Tol = tol; }
       void SetMaxAlpha(const double& ma) { additiveRiskFunctionConfigure.MaxAlpha = edgeInfo.MaxAlpha = ma; }
       void SetMinAlpha(const double& ma) { additiveRiskFunctionConfigure.MinAlpha = edgeInfo.MinAlpha = ma; }

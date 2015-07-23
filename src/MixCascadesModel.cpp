@@ -32,10 +32,12 @@ void MixCascadesModel::Infer(const TFltV& Steps, const TStr& OutFNm) {
       default :
          mixCascadesFunctionConfigure.configure.shapingFunction = new EXPShapingFunction(); 
    } 
-   lossFunction.set(mixCascadesFunctionConfigure);
    em.set(eMConfigure);
    TIntFltH CascadesPositions;
    Data data = {nodeInfo.NodeNmH, CascH, CascadesPositions, 0.0};
+   lossFunction.init(mixCascadesFunctionConfigure.latentVariableSize);
+   lossFunction.set(mixCascadesFunctionConfigure);
+   lossFunction.initKPiParameter();
    lossFunction.InitLatentVariable(data, eMConfigure);
    
    TSampling Sampling = eMConfigure.pGDConfigure.sampling;
@@ -54,8 +56,8 @@ void MixCascadesModel::Infer(const TFltV& Steps, const TStr& OutFNm) {
       Data data = {nodeInfo.NodeNmH, CascH, CascadesPositions, Steps[t]};
       em.Optimize(lossFunction, data);
 
-      const THash<TInt,AdditiveRiskFunction>& kAlphas = lossFunction.getKAlphas();
-      const THash<TInt,TFlt>& kPi = lossFunction.getKPi();
+      const THash<TInt,AdditiveRiskFunction>& kAlphas = lossFunction.parameter.kAlphas;
+      const THash<TInt,TFlt>& kPi = lossFunction.parameter.kPi;
 
       printf("MixCascades prior probability\n");
       for (THash<TInt,TFlt>::TIter piI = kPi.BegI(); !piI.IsEnd(); piI++) printf("topic %d probability: %f, ", piI.GetKey()(), piI.GetDat()());
@@ -64,8 +66,7 @@ void MixCascadesModel::Infer(const TFltV& Steps, const TStr& OutFNm) {
 
       for (THash<TInt,AdditiveRiskFunction>::TIter NI = kAlphas.BegI(); !NI.IsEnd(); NI++) {
          TInt key = NI.GetKey();
-         const TFlt multiplier = NI.GetDat().getParameter().getMultiplier();
-         const THash<TIntPr, TFlt>& alphas = NI.GetDat().getParameter().getAlphas();
+         const THash<TIntPr, TFlt>& alphas = NI.GetDat().parameter.alphas;
          TStrFltFltHNEDNet& inferredNetwork = InferredNetwork;
 
          TFOut FOut(OutFNm + TStr("_") + key.GetStr() + ".txt");
@@ -80,7 +81,7 @@ void MixCascadesModel::Infer(const TFltV& Steps, const TStr& OutFNm) {
             if (i%100000==0) printf("add kAlphas: %d, alphas length: %d, alpha index: %d\n", NI.GetKey()(),alphas.Len(),i);
             TInt srcNId = AI.GetKey().Val1, dstNId = AI.GetKey().Val2;
  
-            TFlt alpha = AI.GetDat() * multiplier;
+            TFlt alpha = AI.GetDat();
             if (inferredNetwork.IsEdge(srcNId, dstNId) && inferredNetwork.GetEDat(srcNId, dstNId).IsKey(Steps[t-1]) && 
                 alpha == inferredNetwork.GetEDat(srcNId, dstNId).GetDat(Steps[t-1]))
                alpha = alpha * Aging;
@@ -92,7 +93,6 @@ void MixCascadesModel::Infer(const TFltV& Steps, const TStr& OutFNm) {
 
             if (!inferredNetwork.GetEDat(srcNId, dstNId).IsKey(Steps[t])) inferredNetwork.GetEDat(srcNId,dstNId).AddDat(Steps[t]) = alpha * kPi.GetDat(key);
             else InferredNetwork.GetEDat(srcNId, dstNId).GetDat(Steps[t]) += alpha * kPi.GetDat(key);
-            //else if (InferredNetwork.GetEDat(srcNId, dstNId).GetDat(Steps[t]) < alpha) InferredNetwork.GetEDat(srcNId, dstNId).GetDat(Steps[t]) = alpha;
          }
       }   
    }

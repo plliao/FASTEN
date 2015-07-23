@@ -9,7 +9,7 @@ typedef struct {
    TFlt Tol, InitAlpha, MaxAlpha, MinAlpha;
    TimeShapingFunction *shapingFunction;
    TRegularizer Regularizer;
-   TFlt Mu;
+   TFlt Mu, observedWindow;
 }AdditiveRiskFunctionConfigure;
 
 class AdditiveRiskFunction;
@@ -24,16 +24,11 @@ class AdditiveRiskParameter {
       AdditiveRiskParameter& projectedlyUpdateGradient(const AdditiveRiskParameter&);
       void reset();
       void set(AdditiveRiskFunctionConfigure configure);
-      const THash<TIntPr,TFlt>& getAlphas() const;
-      const THash<TInt,TFlt>& getInitialAlphas() const;
-      const TFlt getMultiplier() const;
-   private:
+
       TFlt Tol, InitAlpha, MaxAlpha, MinAlpha;
-      TFlt multiplier;
       TRegularizer Regularizer;
       TFlt Mu;
       THash<TIntPr,TFlt> alphas;
-      THash<TInt,TFlt> initialAlphas; 
 };
 
 class AdditiveRiskFunction : public PGDFunction<AdditiveRiskParameter> {

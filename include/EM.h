@@ -20,6 +20,10 @@ class EM {
    public:
       void Optimize(EMLikelihoodFunction<parameter> &LF, Data data) {
          EMIterNm = 0;
+         TFlt::Rnd.PutSeed(0);
+         TInt::Rnd.PutSeed(0);
+         TFlt maxLoss = DBL_MAX;
+         parameter bestParameter;
          while(!IsTerminate()) {
 
             sampledCascadesPositions.Clr();
@@ -32,11 +36,15 @@ class EM {
             }
             Expectation(LF,data);      
             Maximization(LF,data);
-            //loss = LF.Loss(data);
             EMIterNm++;
             printf("EM iteration:%d\n",(int)EMIterNm);
             fflush(stdout);
+            if (truthLoss < maxLoss) {
+               maxLoss = truthLoss;
+               bestParameter = LF.parameter;
+            } 
          }
+         LF.parameter = bestParameter;
       }
       bool IsTerminate() const {
          return EMIterNm >= configure.maxIterNm; 
@@ -48,7 +56,7 @@ class EM {
    private:
       EMConfigure configure;
       size_t iterNm, EMIterNm;
-      TFlt loss;
+      TFlt loss, truthLoss;
       TIntV sampledCascadesPositions;
 
       void Expectation(EMLikelihoodFunction<parameter> &LF, Data data) const {
@@ -77,7 +85,7 @@ class EM {
       
          double time = data.time;
          THash<TInt, TCascade> &cascH = data.cascH;
-         size_t scale = configure.pGDConfigure.maxIterNm / 1;
+         //size_t scale = configure.pGDConfigure.maxIterNm / 1;
          size_t sampledIndex = 0;
          TIntFltH sampledCascadesPositionsHash;
       
@@ -88,7 +96,9 @@ class EM {
          }
          Data sampleData = {data.NodeNmH, data.cascH, sampledCascadesPositionsHash, data.time};
          loss = LF.PGDFunction<parameter>::loss(sampleData)/(double)size;
-         printf("iterNm: %d, loss: %f -> ",(int)iterNm,loss());
+         printf("iterNm: %d, loss: %f ",(int)iterNm,loss());
+         truthLoss = LF.truthLoss(sampleData)/(double)data.cascH.Len();
+         printf(", truth loss: %f -> ",truthLoss());
          fflush(stdout);
          sampledCascadesPositionsHash.Clr();
 
@@ -103,16 +113,15 @@ class EM {
             parameterDiff *= (configure.pGDConfigure.learningRate/double(configure.pGDConfigure.batchSize));
             LF.parameter.projectedlyUpdateGradient(parameterDiff);
             iterNm++;
-            if (iterNm % scale == 0) {
-               double size = (double) sampledCascadesPositionsHash.Len();
-               Data sampleData = {data.NodeNmH, data.cascH, sampledCascadesPositionsHash, data.time};
-               loss = LF.PGDFunction<parameter>::loss(sampleData)/size;
-               printf("iterNm: %d, loss: %f\033[0K\r",(int)iterNm,loss());
-               fflush(stdout);
-            }
          }
-         printf("\n");
          LF.maximize(); 
+               
+         loss = LF.PGDFunction<parameter>::loss(sampleData)/(double)size;
+         printf("iterNm: %d, loss: %f",(int)iterNm,loss());
+         truthLoss = LF.truthLoss(sampleData)/(double)data.cascH.Len();
+         printf(", truth loss: %f\033[0K\r",truthLoss());
+         printf("\n");
+         fflush(stdout);
       }
 };
 
@@ -126,6 +135,19 @@ class EMLikelihoodFunction : public PGDFunction<parameter> {
          TFlt datumLoss = 0.0;
          for (TInt i=0;i<latentVariableSize;i++) datumLoss += latentDistributions.GetDat(datum.index).GetDat(i) * JointLikelihood(datum,i);
          return -1.0 * datumLoss;
+      }
+      TFlt truthLoss(Data data) const {
+         TFlt totalLoss = 0.0;
+         for (THash<TInt, TCascade>::TIter CI = data.cascH.BegI(); !CI.IsEnd(); CI++) {
+            TInt index = CI.GetKey();
+            Datum datum = {data.NodeNmH, data.cascH, index, data.time};
+            TFlt datumLoss = 0.0;
+            for (TInt i=0;i<latentVariableSize;i++) 
+               datumLoss += TMath::Power(TMath::E, JointLikelihood(datum,i));
+            if (datumLoss < DBL_MIN) datumLoss = DBL_MIN;
+            totalLoss += TMath::Log(datumLoss);
+         } 
+         return -1.0 * totalLoss;
       }
       void InitLatentVariable(Data data, EMConfigure configure) {
          latentDistributions.Clr();

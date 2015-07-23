@@ -182,7 +182,6 @@ int main(int argc, char* argv[]) {
   info.Init();
   info.Infer(Steps);
   info.SaveInferred(TStr::Fmt("%s.txt", OutFNm.CStr()));
-  info.SaveInitialAlphas(TStr::Fmt("%s_initialAlphas.txt", OutFNm.CStr()));
   
   Catch
   printf("\nrun time: %s (%s)\n", ExeTm.GetTmStr(), TSecTm::GetCurTm().GetTmStr().CStr());

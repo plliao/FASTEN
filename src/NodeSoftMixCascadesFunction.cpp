@@ -218,6 +218,7 @@ void NodeSoftMixCascadesParameter::init(Data data, TInt NodeNm) {
 }
 
 void NodeSoftMixCascadesParameter::initWeightParameter() {
+   TFlt::Rnd.PutSeed(0);
    for (THash<TInt, THash<TInt, TFlt> >::TIter WI = nodeWeights.BegI(); !WI.IsEnd(); WI++) {
       THash<TInt, TFlt>& weight = WI.GetDat();
       TFlt sum = 0.0;
