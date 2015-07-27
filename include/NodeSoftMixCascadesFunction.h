@@ -49,6 +49,7 @@ class NodeSoftMixCascadesFunction : public EMLikelihoodFunction<NodeSoftMixCasca
       void init(Data data, TInt NodeNm = 0);
       void initWeightParameter() { parameter.initWeightParameter();}
       void initAlphaParameter() { parameter.initAlphaParameter();}
+      void heuristicInitAlphaParameter(Data, int);
       TFlt GetTopicAlpha(TInt srcNId, TInt dstNId, TInt topic) const { return parameter.GetTopicAlpha(srcNId, dstNId, topic);}
       TFlt GetAlpha(TInt srcNId, TInt dstNId, TInt topic) const { return parameter.GetAlpha(srcNId, dstNId, topic);}
 

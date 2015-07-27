@@ -57,12 +57,13 @@ void Info::Infer(const TFltV& Steps) {
          TInt srcNId = AI.GetKey().Val1, dstNId = AI.GetKey().Val2;
 
          TFlt alpha = AI.GetDat();
+         if (alpha < edgeInfo.MinAlpha) continue;
+         if (!InferredNetwork.IsEdge(srcNId, dstNId)) InferredNetwork.AddEdge(srcNId, dstNId, TFltFltH());
+
          if (InferredNetwork.GetEDat(srcNId, dstNId).IsKey(Steps[t-1]) && alpha == InferredNetwork.GetEDat(srcNId, dstNId).GetDat(Steps[t-1]))
             alpha = alpha * Aging;
-         if (alpha < edgeInfo.MinAlpha) continue;
          if (alpha > edgeInfo.MaxAlpha) alpha = edgeInfo.MaxAlpha;
 
-         if (!InferredNetwork.IsEdge(srcNId, dstNId)) InferredNetwork.AddEdge(srcNId, dstNId, TFltFltH());
  
          InferredNetwork.GetEDat(srcNId,dstNId).AddDat(Steps[t]) = alpha;          
       }

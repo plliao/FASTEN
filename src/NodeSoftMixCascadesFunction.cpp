@@ -180,6 +180,7 @@ void NodeSoftMixCascadesFunction::maximize() {
 }
 
 void NodeSoftMixCascadesFunction::set(NodeSoftMixCascadesFunctionConfigure configure) {
+   latentVariableSize = configure.latentVariableSize;
    shapingFunction = configure.shapingFunction;
    parameter.set(configure);
    parameterGrad.set(configure);
@@ -236,6 +237,142 @@ void NodeSoftMixCascadesParameter::initAlphaParameter() {
       for (THash<TIntPr, TFlt>::TIter AI = alphas.BegI(); !AI.IsEnd(); AI++) {
          AI.GetDat() = TFlt::Rnd.GetUniDev() * (MaxAlpha - MinAlpha) + MinAlpha;
       }
+   }
+}
+
+void NodeSoftMixCascadesFunction::heuristicInitAlphaParameter(Data data, int times) {
+   TInt::Rnd.PutSeed(0);
+   THash<TIntPr, TInt> bestEdgeType;
+   THash<TIntPr, TFlt> edgeTimes, edgeDiffTime, edgeStdTime;
+   THash<TInt, TCascade>& cascH = data.cascH;
+   for (THash<TInt, TCascade>::TIter CI = cascH.BegI(); !CI.IsEnd(); CI++) {
+      THash< TInt, THitInfo >::TIter srcI = CI.GetDat().BegI();
+      
+      TInt srcNId = srcI.GetDat().NId, dstNId;
+      TFlt srcTm = srcI.GetDat().Tm, dstTm;
+
+      srcI++;
+      dstNId = srcI.GetDat().NId;
+      dstTm = srcI.GetDat().Tm;
+
+      TIntPr index(srcNId,dstNId);
+      if (!edgeTimes.IsKey(index)) edgeTimes.AddDat(index, 1.0);
+      else edgeTimes.GetDat(index)++;
+      if (!edgeDiffTime.IsKey(index)) edgeDiffTime.AddDat(index, dstTm - srcTm);
+      else edgeDiffTime.GetDat(index) += dstTm - srcTm;
+      if (!edgeStdTime.IsKey(index)) edgeStdTime.AddDat(index, 0.0);
+   } 
+
+   for (THash<TIntPr, TFlt>::TIter TI = edgeDiffTime.BegI(); !TI.IsEnd(); TI++) {
+      TI.GetDat() /= edgeTimes.GetDat(TI.GetKey());
+   }
+
+   for (THash<TInt, TCascade>::TIter CI = cascH.BegI(); !CI.IsEnd(); CI++) {
+      THash< TInt, THitInfo >::TIter srcI = CI.GetDat().BegI();
+      TInt srcNId = srcI.GetDat().NId, dstNId;
+      TFlt srcTm = srcI.GetDat().Tm, dstTm;
+      srcI++;
+      dstNId = srcI.GetDat().NId;
+      dstTm = srcI.GetDat().Tm;
+      TIntPr index(srcNId,dstNId);
+      TFlt delta = dstTm - srcTm - edgeDiffTime.GetDat(index);
+      edgeStdTime.GetDat(index) += delta * delta;
+   }
+
+   for (THash<TIntPr, TFlt>::TIter TI = edgeStdTime.BegI(); !TI.IsEnd(); TI++) {
+      if (edgeTimes.GetDat(TI.GetKey())!=1.0) 
+         TI.GetDat() = TMath::Sqrt(TI.GetDat() / (edgeTimes.GetDat(TI.GetKey()) - 1.0));
+      printf("%d -> %d: %f times, %f diff time, %f std time\n", TI.GetKey().Val1(), TI.GetKey().Val2(), edgeTimes.GetDat(TI.GetKey())(), edgeDiffTime.GetDat(TI.GetKey())(), TI.GetDat()());
+   }
+
+   edgeTimes.SortByDat(false);
+   TInt type = 0;
+   bestEdgeType.AddDat(edgeTimes.GetKey(0), type);
+   while (type < latentVariableSize) {
+      THash<TIntPr, TInt>::TIter lastI = bestEdgeType.EndI();
+      lastI--;   
+      for (THash<TIntPr, TInt>::TIter EI = lastI; !EI.IsEnd(); EI++) {
+         if (edgeTimes.GetDat(EI.GetKey()) < 10.0) continue;
+         TInt srcNId = EI.GetKey().Val1, dstNId = EI.GetKey().Val2;
+   
+         for (int i=0; i<edgeTimes.Len(); i++) {
+            TIntPr index = edgeTimes.GetKey(i);
+            if (bestEdgeType.IsKey(index)) continue;
+            
+            TInt src = index.Val1, dst = index.Val2;
+            TInt base = 0, time = 0;
+            for (THash<TInt, TCascade>::TIter CI = cascH.BegI(); !CI.IsEnd(); CI++) {
+               TCascade& cascade = CI.GetDat();
+               THash< TInt, THitInfo >::TIter SI = cascade.BegI();
+               TInt first = SI.GetDat().NId, second;
+               SI++;
+               second = SI.GetDat().NId;
+   
+               if (first==srcNId and second==dstNId) {
+                  base++;
+                  if (cascade.IsNode(src) and cascade.IsNode(dst) and cascade.GetTm(src) < cascade.GetTm(dst)) {
+                     TFlt delta = cascade.GetTm(dst) - cascade.GetTm(src);
+                     TFlt upperBound = edgeDiffTime.GetDat(index) + 2.0 * edgeStdTime.GetDat(index);
+                     TFlt lowerBound = edgeDiffTime.GetDat(index) - 2.0 * edgeStdTime.GetDat(index);
+                     if (delta < upperBound and delta > lowerBound) time++;
+                  }
+               }
+            }
+            if (time >= base * 0.8) {
+               printf("%d -> %d has same type as %d -> %d with time %d and base %d\n", src(), dst(), srcNId(), dstNId(), time(), base());
+               bestEdgeType.AddDat(index, EI.GetDat());
+            }
+         }
+      }
+
+      if (type == latentVariableSize-1) break;
+
+      bool findNewType = false;
+      for (int i=0; i<edgeTimes.Len(); i++) {
+         TIntPr index = edgeTimes.GetKey(i);
+         if (bestEdgeType.IsKey(index)) continue;
+         
+         bool addInBestEdges = true;
+         TInt srcNId = index.Val1, dstNId = index.Val2;
+         for (THash<TIntPr, TInt>::TIter EI = bestEdgeType.BegI(); !EI.IsEnd(); EI++) {
+            TInt base = 0, time = 0;
+            TInt src = EI.GetKey().Val1, dst = EI.GetKey().Val2;
+            for (THash<TInt, TCascade>::TIter CI = cascH.BegI(); !CI.IsEnd(); CI++) {
+               TCascade& cascade = CI.GetDat();
+               THash< TInt, THitInfo >::TIter SI = cascade.BegI();
+               TInt first = SI.GetDat().NId, second;
+               SI++;
+               second = SI.GetDat().NId;
+
+               if (first==srcNId and second==dstNId) {
+                  base++;
+                  if (cascade.IsNode(src) and cascade.IsNode(dst) and cascade.GetTm(src) < cascade.GetTm(dst)) {
+                     TFlt delta = cascade.GetTm(dst) - cascade.GetTm(src);
+                     TFlt upperBound = edgeDiffTime.GetDat(index) + 2.0 * edgeStdTime.GetDat(index);
+                     TFlt lowerBound = edgeDiffTime.GetDat(index) - 2.0 * edgeStdTime.GetDat(index);
+                     if (delta < upperBound and delta > lowerBound) time++;
+                  }
+               }
+            }
+            if (time >= base * 0.8) {
+               addInBestEdges = false;
+               break;
+            }
+         }
+         if (addInBestEdges) {
+            findNewType = true;
+            type++;
+            bestEdgeType.AddDat(index, type);
+            printf("\n%d -> %d has type %d\n", srcNId(), dstNId(), type());
+            break;
+         }
+      }
+      if (!findNewType) break;
+   }
+
+   for (THash<TIntPr, TInt>::TIter EI = bestEdgeType.BegI(); !EI.IsEnd(); EI++) {
+         TFlt alpha = shapingFunction->expectedAlpha(edgeDiffTime.GetDat(EI.GetKey()));
+         parameter.kAlphas.GetDat(EI.GetDat()).AddDat(EI.GetKey(), alpha);
    }
 }
 

@@ -33,6 +33,24 @@ void NodeSoftMixCascadesModel::SaveWeights(const TStr& OutFNm) {
    }
 }
 
+void NodeSoftMixCascadesModel::ReadAlphas(const TStr& InFNm) {
+  for ( THash<TInt, THash<TIntPr,TFlt> >::TIter AI = lossFunction.parameter.kAlphas.BegI(); !AI.IsEnd(); AI++) {
+     TInt key = AI.GetKey() + 1;
+     TStr FNm = InFNm + "-" + key.GetStr() + "-network.txt";
+     TFIn FIn(FNm);
+     TStr line;
+     while (!FIn.Eof()) {
+        FIn.GetNextLn(line);
+        TStrV tokens;
+        line.SplitOnAllCh(',', tokens);
+        if (tokens.Len()==4) {
+           TIntPr index(tokens[0].GetInt(), tokens[1].GetInt());
+           AI.GetDat().AddDat(index, tokens[3].GetFlt());
+        }
+     }
+  }
+}
+
 void NodeSoftMixCascadesModel::ReadWeights(const TStr& InFNm) {
   TFIn FIn(InFNm);
   TStr line; 
@@ -297,7 +315,9 @@ void NodeSoftMixCascadesModel::Infer(const TFltV& Steps, const TStr& OutFNm) {
    OutFNm.SplitOnCh(resultDir, '/', outName);
    outName.SplitOnCh(expName, '-', modelName);
    //ReadWeights("data/" + expName + "_Weights.txt");
+   //ReadAlphas("data/" + expName);
    lossFunction.initWeightParameter();
+   lossFunction.heuristicInitAlphaParameter(data, 10);
    lossFunction.InitLatentVariable(data, eMConfigure);
   
    printf("Node Soft Mix Cascades initialization done\n");
