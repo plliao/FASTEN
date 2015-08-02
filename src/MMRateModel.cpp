@@ -25,6 +25,7 @@ void MMRateModel::SaveDiffusionPatterns(const TStr& OutFNm) {
 void MMRateModel::Init() {
    for (THash<TInt, TNodeInfo>::TIter NI = nodeInfo.NodeNmH.BegI(); NI < nodeInfo.NodeNmH.EndI(); NI++) {
       InferredNetwork.AddNode(NI.GetKey(), NI.GetDat().Name);
+      MaxNetwork.AddNode(NI.GetKey(), NI.GetDat().Name);
    }
 }
 
@@ -94,14 +95,18 @@ void MMRateModel::Infer(const TFltV& Steps, const TStr& OutFNm) {
             
             if (alpha <= mMRateFunctionConfigure.MinAlpha) continue;
             if (!inferredNetwork.IsEdge(srcNId, dstNId)) inferredNetwork.AddEdge(srcNId, dstNId, TFltFltH());
+            if (!MaxNetwork.IsEdge(srcNId, dstNId)) MaxNetwork.AddEdge(srcNId, dstNId, TFltFltH());
  
             FOut.PutStr(TStr::Fmt("%d,%d,%f,%f\n", srcNId, dstNId, Steps[t], alpha));
 
             if (!inferredNetwork.GetEDat(srcNId, dstNId).IsKey(Steps[t])) inferredNetwork.GetEDat(srcNId,dstNId).AddDat(Steps[t]) = alpha * kPi.GetDat(key);
             else InferredNetwork.GetEDat(srcNId, dstNId).GetDat(Steps[t]) += alpha * kPi.GetDat(key);
-            //else if (InferredNetwork.GetEDat(srcNId, dstNId).GetDat(Steps[t]) < alpha) InferredNetwork.GetEDat(srcNId, dstNId).GetDat(Steps[t]) = alpha;
+
+            if (!MaxNetwork.GetEDat(srcNId, dstNId).IsKey(Steps[t])) MaxNetwork.GetEDat(srcNId,dstNId).AddDat(Steps[t]) = alpha;
+            else if (MaxNetwork.GetEDat(srcNId, dstNId).GetDat(Steps[t]) < alpha) MaxNetwork.GetEDat(srcNId, dstNId).GetDat(Steps[t]) = alpha;
          }
       }   
    }
+   InfoPathFileIO::SaveNetwork(OutFNm + "_Max.txt", MaxNetwork, nodeInfo, edgeInfo);
    delete mMRateFunctionConfigure.shapingFunction;
 }

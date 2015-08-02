@@ -12,7 +12,7 @@ class MixCascadesModel {
       NodeInfo nodeInfo;
       EdgeInfo edgeInfo;
       THash<TInt, TCascade> CascH;
-      TStrFltFltHNEDNet Network, InferredNetwork; 
+      TStrFltFltHNEDNet Network, InferredNetwork, MaxNetwork; 
      
       TFlt Window, TotalTime, Delta; 
       TFlt Gamma, Aging;

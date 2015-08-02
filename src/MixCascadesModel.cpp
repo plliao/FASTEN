@@ -17,6 +17,7 @@ void MixCascadesModel::SaveInferred(const TStr& OutFNm) {
 void MixCascadesModel::Init() {
    for (THash<TInt, TNodeInfo>::TIter NI = nodeInfo.NodeNmH.BegI(); NI < nodeInfo.NodeNmH.EndI(); NI++) {
       InferredNetwork.AddNode(NI.GetKey(), NI.GetDat().Name);
+      MaxNetwork.AddNode(NI.GetKey(), NI.GetDat().Name);
    }
 }
 
@@ -88,13 +89,18 @@ void MixCascadesModel::Infer(const TFltV& Steps, const TStr& OutFNm) {
             
             if (alpha <= mixCascadesFunctionConfigure.configure.MinAlpha) continue;
             if (!inferredNetwork.IsEdge(srcNId, dstNId)) inferredNetwork.AddEdge(srcNId, dstNId, TFltFltH());
+            if (!MaxNetwork.IsEdge(srcNId, dstNId)) MaxNetwork.AddEdge(srcNId, dstNId, TFltFltH());
  
             FOut.PutStr(TStr::Fmt("%d,%d,%f,%f\n", srcNId, dstNId, Steps[t], alpha));
 
             if (!inferredNetwork.GetEDat(srcNId, dstNId).IsKey(Steps[t])) inferredNetwork.GetEDat(srcNId,dstNId).AddDat(Steps[t]) = alpha * kPi.GetDat(key);
             else InferredNetwork.GetEDat(srcNId, dstNId).GetDat(Steps[t]) += alpha * kPi.GetDat(key);
+
+            if (!MaxNetwork.GetEDat(srcNId, dstNId).IsKey(Steps[t])) MaxNetwork.GetEDat(srcNId,dstNId).AddDat(Steps[t]) = alpha;
+            else if (alpha > MaxNetwork.GetEDat(srcNId, dstNId).GetDat(Steps[t])) MaxNetwork.GetEDat(srcNId, dstNId).GetDat(Steps[t]) = alpha;
          }
       }   
    }
+   InfoPathFileIO::SaveNetwork(OutFNm + "_Max.txt", MaxNetwork, nodeInfo, edgeInfo);
    delete mixCascadesFunctionConfigure.configure.shapingFunction; 
 }
