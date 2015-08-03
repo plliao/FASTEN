@@ -24,6 +24,7 @@ class EM {
          TInt::Rnd.PutSeed(0);
          TFlt maxLoss = DBL_MAX;
          parameter bestParameter;
+         truthLoss = -DBL_MAX;
          while(!IsTerminate()) {
 
             sampledCascadesPositions.Clr();
@@ -97,7 +98,8 @@ class EM {
          Data sampleData = {data.NodeNmH, data.cascH, sampledCascadesPositionsHash, data.time};
          loss = LF.PGDFunction<parameter>::loss(sampleData)/(double)size;
          printf("iterNm: %d, loss: %f ",(int)iterNm,loss());
-         truthLoss = LF.truthLoss(sampleData)/(double)data.cascH.Len();
+         if (truthLoss == -DBL_MAX) 
+            truthLoss = LF.truthLoss(sampleData)/(double)data.cascH.Len();
          printf(", truth loss: %f -> ",truthLoss());
          fflush(stdout);
          sampledCascadesPositionsHash.Clr();

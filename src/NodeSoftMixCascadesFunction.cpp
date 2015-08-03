@@ -243,7 +243,9 @@ void NodeSoftMixCascadesParameter::initAlphaParameter() {
 void NodeSoftMixCascadesFunction::heuristicInitAlphaParameter(Data data, int times) {
    TInt::Rnd.PutSeed(0);
    THash<TIntPr, TInt> edgeType;
-   THash<TIntPr, TFlt> edgeTimes, edgeDiffTime, edgeStdTime;
+   THash<TIntPr, TFlt> edgeTimes, edgeDiffTime;
+   THash<TIntPr, TVec<TCascade*> > edgeMap;
+   THash<TIntPr, TVec<TFlt> > edgeSamples;
    THash<TInt, TCascade>& cascH = data.cascH;
    for (THash<TInt, TCascade>::TIter CI = cascH.BegI(); !CI.IsEnd(); CI++) {
       THash< TInt, THitInfo >::TIter srcI = CI.GetDat().BegI();
@@ -260,32 +262,15 @@ void NodeSoftMixCascadesFunction::heuristicInitAlphaParameter(Data data, int tim
       else edgeTimes.GetDat(index)++;
       if (!edgeDiffTime.IsKey(index)) edgeDiffTime.AddDat(index, dstTm - srcTm);
       else edgeDiffTime.GetDat(index) += dstTm - srcTm;
-      if (!edgeStdTime.IsKey(index)) edgeStdTime.AddDat(index, 0.0);
+      if (!edgeMap.IsKey(index)) edgeMap.AddDat(index, TVec<TCascade*>());
+      edgeMap.GetDat(index).Add(&CI.GetDat());
+      if (!edgeSamples.IsKey(index)) edgeSamples.AddDat(index, TVec<TFlt>());
+      edgeSamples.GetDat(index).Add(dstTm - srcTm);
    } 
 
    for (THash<TIntPr, TFlt>::TIter TI = edgeDiffTime.BegI(); !TI.IsEnd(); TI++) {
       TI.GetDat() /= edgeTimes.GetDat(TI.GetKey());
-   }
-
-   for (THash<TInt, TCascade>::TIter CI = cascH.BegI(); !CI.IsEnd(); CI++) {
-      THash< TInt, THitInfo >::TIter srcI = CI.GetDat().BegI();
-      TInt srcNId = srcI.GetDat().NId, dstNId;
-      TFlt srcTm = srcI.GetDat().Tm, dstTm;
-      srcI++;
-      dstNId = srcI.GetDat().NId;
-      dstTm = srcI.GetDat().Tm;
-      TIntPr index(srcNId,dstNId);
-      TFlt delta = dstTm - srcTm - edgeDiffTime.GetDat(index);
-      edgeStdTime.GetDat(index) += delta * delta;
-   }
-
-   for (THash<TIntPr, TFlt>::TIter TI = edgeStdTime.BegI(); !TI.IsEnd(); TI++) {
-      if (edgeTimes.GetDat(TI.GetKey())!=1.0) {
-         TI.GetDat() = TMath::Sqrt(TI.GetDat() / (edgeTimes.GetDat(TI.GetKey()) - 1.0));
-         TI.GetDat() /= TMath::Sqrt(edgeTimes.GetDat(TI.GetKey()));
-      }
-      if (edgeTimes.GetDat(TI.GetKey()) >= 30.0)
-         printf("%d -> %d: %f times, %f diff time, %f std time\n", TI.GetKey().Val1(), TI.GetKey().Val2(), edgeTimes.GetDat(TI.GetKey())(), edgeDiffTime.GetDat(TI.GetKey())(), TI.GetDat()());
+      edgeSamples.GetDat(TI.GetKey()).Sort();
    }
 
    edgeTimes.SortByDat(false);
@@ -300,51 +285,87 @@ void NodeSoftMixCascadesFunction::heuristicInitAlphaParameter(Data data, int tim
          bool addInBestEdges = true;
          TInt srcNId = index.Val1, dstNId = index.Val2;
          TIntPrV possibleSameTypeEdges;
-         THash<TIntPr, TFlt> possibleSameTypeTimes, possibleSameTypeUpperBound, possibleSameTypeLowerBound;
+         THash<TIntPr, TFlt> possibleSameTypeDiff, possibleSameTypeDiffThreshold;
+         THash<TIntPr, TInt> possibleSameTypeSupport;
+         TVec<TCascade*> cascades = edgeMap.GetDat(index);
+
+         //printf("%d -> %d:\n", srcNId(), dstNId());
          for (int j=0; j<edgeTimes.Len(); j++) {
             if (j==i) continue;
             TIntPr checkIndex = edgeTimes.GetKey(j);
-            TInt time = 0;
             TInt src = checkIndex.Val1, dst = checkIndex.Val2;
-            TFlt totalDiffTime = 0.0;
-            for (THash<TInt, TCascade>::TIter CI = cascH.BegI(); !CI.IsEnd(); CI++) {
-               TCascade& cascade = CI.GetDat();
-               THash< TInt, THitInfo >::TIter SI = cascade.BegI();
-               TInt first = SI.GetDat().NId, second;
-               SI++;
-               second = SI.GetDat().NId;
-
-               if (first==srcNId and second==dstNId) {
-                  if (cascade.IsNode(src) and cascade.IsNode(dst) and cascade.GetTm(src) < cascade.GetTm(dst)) {
-                     totalDiffTime += cascade.GetTm(dst) - cascade.GetTm(src);
-                     time++;
-                  }
+            TFltV sample1 = edgeSamples.GetDat(checkIndex), sample2;
+            for (TVec<TCascade*>::TIter CI = cascades.BegI(); CI < cascades.EndI(); CI++) {
+               TCascade& cascade = **CI;
+               if (cascade.IsNode(src) and cascade.IsNode(dst) and shapingFunction->Before(cascade.GetTm(src), cascade.GetTm(dst))) {
+                  sample2.Add(cascade.GetTm(dst)-cascade.GetTm(src));
                }
             }
-            TFlt expectedDiffTime = totalDiffTime / (double)time;
-            TFlt upperBound = edgeDiffTime.GetDat(checkIndex) + 2.0 * edgeStdTime.GetDat(checkIndex);
-            TFlt lowerBound = edgeDiffTime.GetDat(checkIndex) - 2.0 * edgeStdTime.GetDat(checkIndex);
-            if (expectedDiffTime <= upperBound and expectedDiffTime >= lowerBound and time >= 30 and edgeTimes.GetDat(checkIndex) >= 10) {
+            sample2.Sort();
+
+
+            TInt n1 = sample1.Len(), n2 = sample2.Len();
+            TInt i1 = 0, i2 = 0;
+            TFlt diff = -DBL_MAX;
+            if (n2 <= 0.8 * (double)cascades.Len() or n1 < 10) continue;
+
+            //printf("\t%d -> %d: ", src(), dst());
+            while (i1 < n1 and i2 < n2) {
+               TFlt min1, min2;
+               TFlt x1 = sample1[i1], x2 = sample2[i2];
+               if (x1 < x2) {
+                  min1 = x1;
+                  i1++;
+               }
+               else {
+                  min2 = x2;
+                  i2++;
+               }
+               
+               if (i1==n1) min2 = x2;
+               else if (i2==n2) min2 = x1;
+               else {
+                  x1 = sample1[i1];
+                  x2 = sample2[i2];
+                  min2 = (x1 < x2) ? x1 : x2;
+               }
+
+               TFlt threshold = (min1 + min2) / 2.0;
+               while (i1 < n1 and sample1[i1] < threshold) i1++;
+               while (i2 < n2 and sample2[i2] < threshold) i2++;
+               TFlt F1 = (double)i1/ (double)n1, F2 = (double)i2/ (double)n2;
+               if (TFlt::Abs(F1-F2) > diff) {
+                  diff = TFlt::Abs(F1-F2);
+                  //printf("%f, ", diff());
+               }
+            }
+            //printf("\n");
+
+            TFlt diffThreshold = 1.22 * TMath::Sqrt((double)(n1+n2)/(double)(n1*n2));
+
+            //printf("\t\t n2 = %d, n = %d, diffThreshold = %f\n", n2(), cascades.Len(), diffThreshold());
+            if (n2 > 0.8 * (double)cascades.Len() and diff < diffThreshold) {
                if (edgeType.IsKey(checkIndex)) {
                   addInBestEdges = false;
                   break;
                }
-               possibleSameTypeEdges.Add(checkIndex); 
-               possibleSameTypeTimes.AddDat(checkIndex, expectedDiffTime);
-               possibleSameTypeUpperBound.AddDat(checkIndex, upperBound);
-               possibleSameTypeLowerBound.AddDat(checkIndex, lowerBound);
+               possibleSameTypeEdges.Add(checkIndex);
+               possibleSameTypeDiff.AddDat(checkIndex, diff);
+               possibleSameTypeDiffThreshold.AddDat(checkIndex, diffThreshold); 
+               possibleSameTypeSupport.AddDat(checkIndex, n2);
             }
          }
-         if (addInBestEdges and possibleSameTypeEdges.Len() > 5) {
+         if (addInBestEdges and possibleSameTypeEdges.Len() > 1) {
             findNewType = true;
             edgeType.AddDat(index, type);
-            printf("\n%d -> %d has type %d\n", srcNId(), dstNId(), type());
+            printf("\n%d -> %d has type %d, %d\n", srcNId(), dstNId(), type(), cascades.Len());
             for (int i=0; i<possibleSameTypeEdges.Len(); i++) {
                TIntPr index = possibleSameTypeEdges[i];
                edgeType.AddDat(index, type);
-               printf("%d -> %d has same type as %d -> %d with expected diff time %f in (%f, %f)\n", \
-                      index.Val1(), index.Val2(), srcNId(), dstNId(), possibleSameTypeTimes.GetDat(index)(), \
-                      possibleSameTypeLowerBound.GetDat(index)(), possibleSameTypeUpperBound.GetDat(index)());
+               printf("%d -> %d has same type as %d -> %d with n1 %d, n2 %d , %f < %f\n", \
+                      index.Val1(), index.Val2(), srcNId(), dstNId(), \
+                      (int)edgeTimes.GetDat(index), possibleSameTypeSupport.GetDat(index)(), \
+                      possibleSameTypeDiff.GetDat(index)(), possibleSameTypeDiffThreshold.GetDat(index)());
             }
             type++;
             break;

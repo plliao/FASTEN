@@ -18,6 +18,10 @@ TFlt EXPShapingFunction::expectedAlpha(TFlt time) const {
    return 1.0 / time;
 }
 
+TFlt EXPShapingFunction::pValue(TFlt srcTime, TFlt dstTime, TFlt alpha) const {
+   TFlt time = dstTime - srcTime;
+   return TMath::Power(TMath::E, -1.0 * alpha * time);
+}
 
 TFlt POWShapingFunction::Value(TFlt srcTime,TFlt dstTime) const {
    if (Before(srcTime, dstTime)) return 1.0 / (dstTime - srcTime);
@@ -37,6 +41,10 @@ TFlt POWShapingFunction::expectedAlpha(TFlt time) const {
    return time / (time - delta);
 }
 
+TFlt POWShapingFunction::pValue(TFlt srcTime, TFlt dstTime, TFlt alpha) const {
+   TFlt time = dstTime - srcTime - delta;
+   return TMath::Power(time / delta, -1.0 * alpha);
+}
 
 TFlt RAYShapingFunction::Value(TFlt srcTime,TFlt dstTime) const {
    if (srcTime < dstTime) return dstTime - srcTime;
@@ -55,4 +63,11 @@ bool RAYShapingFunction::Before(TFlt srcTime,TFlt dstTime) const {
 TFlt RAYShapingFunction::expectedAlpha(TFlt time) const {
    return 3.14159 / 2.0 / TMath::Power(time, 2.0);
 
+}
+
+TFlt RAYShapingFunction::pValue(TFlt srcTime, TFlt dstTime, TFlt alpha) const {
+   TFlt time = dstTime - srcTime;
+   TFlt value = TMath::Power(TMath::E, -1.0 * time * time / alpha / alpha /2.0);
+   if (time < alpha) return 1.0 - value; 
+   return value;
 }

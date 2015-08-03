@@ -10,6 +10,7 @@ class TimeShapingFunction {
       virtual TFlt Integral(TFlt srcTime,TFlt dstTime) const = 0;
       virtual bool Before(TFlt srcTime,TFlt dstTime) const = 0;
       virtual TFlt expectedAlpha(TFlt) const = 0;
+      virtual TFlt pValue(TFlt, TFlt, TFlt) const = 0;
 };
 
 class EXPShapingFunction : public TimeShapingFunction {
@@ -18,6 +19,7 @@ class EXPShapingFunction : public TimeShapingFunction {
      TFlt Integral(TFlt srcTime,TFlt dstTime) const;
      bool Before(TFlt srcTime,TFlt dstTime) const;
      TFlt expectedAlpha(TFlt) const;
+     TFlt pValue(TFlt, TFlt, TFlt) const;
 };
 
 class POWShapingFunction : public TimeShapingFunction {
@@ -27,6 +29,7 @@ class POWShapingFunction : public TimeShapingFunction {
      TFlt Integral(TFlt srcTime,TFlt dstTime) const;
      bool Before(TFlt srcTime,TFlt dstTime) const;
      TFlt expectedAlpha(TFlt) const;
+     TFlt pValue(TFlt, TFlt, TFlt) const;
 
      TFlt delta;
 };
@@ -37,5 +40,6 @@ class RAYShapingFunction : public TimeShapingFunction {
      TFlt Integral(TFlt srcTime,TFlt dstTime) const;
      bool Before(TFlt srcTime,TFlt dstTime) const;
      TFlt expectedAlpha(TFlt) const;
+     TFlt pValue(TFlt, TFlt, TFlt) const;
 };
 #endif
