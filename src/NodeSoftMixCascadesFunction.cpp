@@ -280,7 +280,7 @@ void NodeSoftMixCascadesFunction::heuristicInitAlphaParameter(Data data, int tim
       for (int i=0; i<edgeTimes.Len(); i++) {
          TIntPr index = edgeTimes.GetKey(i);
          if (edgeType.IsKey(index)) continue;
-         if (edgeTimes.GetDat(index) < 30.0) break;
+         if (edgeTimes.GetDat(index) < 10.0) break;
          
          bool addInBestEdges = true;
          TInt srcNId = index.Val1, dstNId = index.Val2;
