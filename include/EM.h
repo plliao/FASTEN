@@ -45,7 +45,7 @@ class EM {
                bestParameter = LF.parameter;
             } 
          }
-         LF.parameter = bestParameter;
+         //LF.parameter = bestParameter;
       }
       bool IsTerminate() const {
          return EMIterNm >= configure.maxIterNm; 
