@@ -318,7 +318,7 @@ void NodeSoftMixCascadesModel::Infer(const TFltV& Steps, const TStr& OutFNm) {
    //ReadWeights("data/" + expName + "_Weights.txt");
    //ReadAlphas("data/" + expName);
    lossFunction.initWeightParameter();
-   lossFunction.heuristicInitAlphaParameter(data, 10);
+   if (useHeuristic==0) lossFunction.heuristicInitAlphaParameter(data, 10);
    lossFunction.InitLatentVariable(data, eMConfigure);
   
    printf("Node Soft Mix Cascades initialization done\n");

@@ -17,6 +17,7 @@ class NodeSoftMixCascadesModel {
       TFlt Window, TotalTime; 
       TFlt Delta, K;
       TFlt Gamma, Aging;
+      TInt useHeuristic;
 
       NodeSoftMixCascadesFunctionConfigure nodeSoftMixCascadesFunctionConfigure;
       NodeSoftMixCascadesFunction lossFunction;
@@ -42,6 +43,7 @@ class NodeSoftMixCascadesModel {
       void SetObservedWindow(const double& window) { lossFunction.observedWindow = window; }
       void SetDelta(const double& delta) { Delta = delta; }
       void SetK(const double& k) { K = k; }
+      void SetHeuristic(const int& u) { useHeuristic = u;}
 
       void SetLearningRate(const double& lr) { eMConfigure.pGDConfigure.learningRate = lr; }
       void SetBatchSize(const size_t batchSize) { eMConfigure.pGDConfigure.batchSize = batchSize;}

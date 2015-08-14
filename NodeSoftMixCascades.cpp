@@ -30,6 +30,7 @@ int main(int argc, char* argv[]) {
 
   double Window = Env.GetIfArgPrefixFlt("-h:", -1, "Time window per cascade (if any), -1 means the window is set by  means last infection time (default:-1)\n");
   double observedWindow = Env.GetIfArgPrefixFlt("-w:", 10.0, "Observed time window (default 10.0)\n");
+  const int useHeuristic = Env.GetIfArgPrefixInt("-heu:", 0, "use heuristic initialization method, 0:use, 1:don't use, default 0\n");
 
   const TStr NodeIdx = Env.GetIfArgPrefixStr("-ni:", "-1", "Node indeces to estimate incoming tx rates (-1:all nodes, -X:random -X-node subset)");
 
@@ -65,6 +66,7 @@ int main(int argc, char* argv[]) {
   nodeSoftMixCascades.SetBatchSize(BatchLen);
   nodeSoftMixCascades.SetLearningRate(lr);
   nodeSoftMixCascades.SetParamSampling(ParamSampling);
+  nodeSoftMixCascades.SetHeuristic(useHeuristic);
 
   nodeSoftMixCascades.SetLatentVariableSize(latentVariableSize);
   nodeSoftMixCascades.SetTolerance(Tol);
