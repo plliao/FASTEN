@@ -40,7 +40,7 @@ class PGD {
                Datum datum = {data.NodeNmH, cascH, cascH.GetKey(cascadesIdx.GetKey(index)), time};
                parameterDiff += f.gradient(datum);
             }
-            f.calculateRMSProp(0.1, learningRate, parameterDiff);
+            //f.calculateRMSProp(0.1, learningRate, parameterDiff);
             parameterDiff *= (configure.learningRate/double(configure.batchSize));
             f.parameter.projectedlyUpdateGradient(parameterDiff);
             iterNm++;
