@@ -55,6 +55,7 @@ class NodeSoftMixCascadesModel {
       void SetAging(const double& aging) { Aging = aging; }
       void SetRegularizer(const TRegularizer& reg) { nodeSoftMixCascadesFunctionConfigure.Regularizer = reg; }
       void SetMu(const double& mu) { nodeSoftMixCascadesFunctionConfigure.Mu = mu; }
+      void SetDampingFactor(const double& df) { nodeSoftMixCascadesFunctionConfigure.dampingFactor = df; }
       void SetTolerance(const double& tol) { nodeSoftMixCascadesFunctionConfigure.Tol = tol; }
       void SetMaxAlpha(const double& ma) { nodeSoftMixCascadesFunctionConfigure.MaxAlpha = edgeInfo.MaxAlpha = ma; }
       void SetMinAlpha(const double& ma) { nodeSoftMixCascadesFunctionConfigure.MinAlpha = edgeInfo.MinAlpha = ma; }

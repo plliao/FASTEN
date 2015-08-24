@@ -18,6 +18,7 @@ TFlt MMRateFunction::JointLikelihood(Datum datum, TInt latentVariable) const {
       TInt dstNId = key, srcNId;
       TFlt sumInLog = 0.0, val = 0.0;
       TFlt dstTime, srcTime;
+      lossTable[i] = 0.0;
 
       if (Cascade.IsNode(dstNId) && Cascade.GetTm(dstNId) <= CurrentTime) dstTime = Cascade.GetTm(dstNId);
       else dstTime = Cascade.GetMaxTm() + observedWindow;
@@ -30,10 +31,12 @@ TFlt MMRateFunction::JointLikelihood(Datum datum, TInt latentVariable) const {
                         
          TIntPr alphaIndex; alphaIndex.Val1 = srcNId; alphaIndex.Val2 = dstNId;
 
-         TFlt alpha;
-         if (alphas.IsKey(alphaIndex)) alpha = alphas.GetDat(alphaIndex);
-         else alpha = parameter.InitAlpha;
-         alpha += diffusionPattern;
+         TFlt alpha = 0.0;
+         if (potentialEdges.IsKey(alphaIndex)) {
+            if (alphas.IsKey(alphaIndex)) alpha = alphas.GetDat(alphaIndex);
+            else alpha = parameter.InitAlpha;
+            alpha += diffusionPattern;
+         }
 
          sumInLog += alpha * shapingFunction->Value(srcTime,dstTime);
          val += alpha * shapingFunction->Integral(srcTime,dstTime);
@@ -119,6 +122,8 @@ MMRateParameter& MMRateFunction::gradient(Datum datum) {
             srcTime = CascadeNI.GetDat().Tm;
    
             if (!shapingFunction->Before(srcTime,dstTime)) break; 
+            TIntPr key(srcNId, dstNId);
+            if (!potentialEdges.IsKey(key)) continue;
                            
             TIntPr alphaIndex; alphaIndex.Val1 = srcNId; alphaIndex.Val2 = dstNId;
             if (Cascade.IsNode(dstNId) && Cascade.GetTm(dstNId) <= CurrentTime)
@@ -159,6 +164,23 @@ MMRateParameter& MMRateFunction::gradient(Datum datum) {
       parameterGrad.kPi_times.GetDat(key)++; 
    }
    return parameterGrad;
+}
+
+void MMRateFunction::initPotentialEdges(Data data) {
+  THash<TInt, TCascade>& cascades = data.cascH;
+  int cascadesNum = cascades.Len();
+  //#pragma omp parallel for
+  for (int i=0;i<cascadesNum;i++) {
+     TCascade& cascade = cascades[i];
+     for (THash<TInt, THitInfo>::TIter srcNI = cascade.BegI(); srcNI < cascade.EndI(); srcNI++) {
+        for (THash<TInt, THitInfo>::TIter dstNI = srcNI; dstNI < cascade.EndI(); dstNI++) {
+           if (srcNI==dstNI) continue;
+           TIntPr key(srcNI.GetKey(), dstNI.GetKey());
+           if (dstNI.GetDat().Tm <= data.time)
+              potentialEdges.AddDat(key, 1.0);
+        } 
+     }
+  }
 }
 
 void MMRateFunction::maximize() {

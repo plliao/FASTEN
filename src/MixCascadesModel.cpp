@@ -55,6 +55,7 @@ void MixCascadesModel::Infer(const TFltV& Steps, const TStr& OutFNm) {
          }
       }
       Data data = {nodeInfo.NodeNmH, CascH, CascadesPositions, Steps[t]};
+      lossFunction.initPotentialEdges(data);
       em.Optimize(lossFunction, data);
 
       const THash<TInt,AdditiveRiskFunction>& kAlphas = lossFunction.parameter.kAlphas;

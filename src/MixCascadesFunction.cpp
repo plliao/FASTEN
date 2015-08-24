@@ -31,6 +31,12 @@ void MixCascadesFunction::maximize() {
    }
 }
 
+void MixCascadesFunction::initPotentialEdges(Data data) {
+  for (THash<TInt,AdditiveRiskFunction>::TIter AI = parameter.kAlphas.BegI(); !AI.IsEnd(); AI++) {
+     AI.GetDat().initPotentialEdges(data);
+  }
+}
+
 void MixCascadesFunction::init(TInt latentVariableSize) {
    parameter.init(latentVariableSize);
    parameterGrad.init(latentVariableSize);

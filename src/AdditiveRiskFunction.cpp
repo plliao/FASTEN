@@ -18,10 +18,8 @@ AdditiveRiskParameter& AdditiveRiskFunction::gradient(Datum datum) {
    int *srcNIds = new int[nodeSize * cascadeSize];
    int *dstNIds = new int[nodeSize * cascadeSize];
    float *vals  = new float[nodeSize * cascadeSize];
-   //float *initialVals = new float[nodeSize];
  
    for (int i=0;i<nodeSize;i++) {
-      //initialVals[i] = 0.0;
       for (int j=0;j<cascadeSize;j++) {
          int index = i*cascadeSize + j;
          srcNIds[index] = dstNIds[index] = -1;
@@ -36,11 +34,6 @@ AdditiveRiskParameter& AdditiveRiskFunction::gradient(Datum datum) {
       TInt dstNId = NI.GetKey(), srcNId;
       TFlt sumInLog = 0.0, val = 0.0;
       TFlt dstTime, srcTime;
-
-      /*//self infected
-      TFlt selfAlpha;
-      if (parameter.initialAlphas.IsKey(dstNId)) selfAlpha = parameter.initialAlphas.GetDat(dstNId);
-      else selfAlpha = parameter.InitAlpha;*/
 
       if (Cascade.IsNode(dstNId) && Cascade.GetTm(dstNId) <= CurrentTime) {
          dstTime = Cascade.GetTm(dstNId);
@@ -62,20 +55,14 @@ AdditiveRiskParameter& AdditiveRiskFunction::gradient(Datum datum) {
       }
       else dstTime = Cascade.GetMaxTm() + observedWindow; 
 
-      /*//self infected
-      sumInLog += selfAlpha;
-      if (Cascade.IsNode(dstNId) && Cascade.GetTm(dstNId) <= CurrentTime)
-         val = dstTime - startTime - 1.0/sumInLog;
-      else
-         val = dstTime - startTime;
-      initialVals[i] = val();*/
-
       int j=0;
       for (THash<TInt, THitInfo>::TIter CascadeNI = Cascade.BegI(); CascadeNI < Cascade.EndI(); CascadeNI++,j++) {
          srcNId = CascadeNI.GetKey();
          srcTime = CascadeNI.GetDat().Tm;
 
          if (!shapingFunction->Before(srcTime,dstTime)) break; 
+         TIntPr key(srcNId, dstNId);
+         if (!potentialEdges.IsKey(key)) continue;
                         
          TIntPr alphaIndex; alphaIndex.Val1 = srcNId; alphaIndex.Val2 = dstNId;
          if (Cascade.IsNode(dstNId) && Cascade.GetTm(dstNId) <= CurrentTime)
@@ -93,8 +80,6 @@ AdditiveRiskParameter& AdditiveRiskFunction::gradient(Datum datum) {
    }
 
    for (int i=0;i<nodeSize;i++) {
-      //TInt key = NodeNmH.GetKey(i);
-      //parameterGrad.initialAlphas.AddDat(key, initialVals[i]);
       for (int j=0;j<cascadeSize;j++) {
          int index = i*cascadeSize + j;
          if (srcNIds[index]==-1) break;
@@ -106,7 +91,6 @@ AdditiveRiskParameter& AdditiveRiskFunction::gradient(Datum datum) {
    delete[] srcNIds;
    delete[] dstNIds;
    delete[] vals;
-   //delete[] initialVals;
 
    return parameterGrad;
 }
@@ -126,11 +110,7 @@ TFlt AdditiveRiskFunction::loss(Datum datum) const {
       TInt dstNId = NI.GetKey(), srcNId;
       TFlt sumInLog = 0.0, val = 0.0;
       TFlt dstTime, srcTime;
-
-      /*//self infected
-      TFlt selfAlpha;
-      if (parameter.initialAlphas.IsKey(dstNId)) selfAlpha = parameter.initialAlphas.GetDat(dstNId);
-      else selfAlpha = parameter.InitAlpha;*/
+      lossTable[i] = 0.0;
 
       if (Cascade.IsNode(dstNId) && Cascade.GetTm(dstNId) <= CurrentTime) dstTime = Cascade.GetTm(dstNId);
       else dstTime = Cascade.GetMaxTm() + observedWindow; 
@@ -143,17 +123,16 @@ TFlt AdditiveRiskFunction::loss(Datum datum) const {
                         
          TIntPr alphaIndex; alphaIndex.Val1 = srcNId; alphaIndex.Val2 = dstNId;
 
-         TFlt alpha;
-         if (parameter.alphas.IsKey(alphaIndex)) alpha = parameter.alphas.GetDat(alphaIndex);
-         else alpha = parameter.InitAlpha;
+         TFlt alpha = 0.0;
+         if (potentialEdges.IsKey(alphaIndex)) {
+            if (parameter.alphas.IsKey(alphaIndex)) alpha = parameter.alphas.GetDat(alphaIndex);
+            else alpha = parameter.InitAlpha;
+         }
 
          sumInLog += alpha * shapingFunction->Value(srcTime,dstTime);
          val += alpha * shapingFunction->Integral(srcTime,dstTime);
          //printf("sumInLog:%f,val:%f, alpha:%f, shapingVal:%f, shapingInt:%f\n",sumInLog(),val(),alpha(),shapingFunction->Value(srcTime,dstTime)(),shapingFunction->Integral(srcTime,dstTime)()); 
       }
-      //self infected
-      //sumInLog += selfAlpha;
-      //val += selfAlpha * (dstTime - startTime);
       lossTable[i] = val;
       
       if (Cascade.IsNode(dstNId) && Cascade.GetTm(dstNId) <= CurrentTime && sumInLog!=0.0) lossTable[i] -= TMath::Log(sumInLog);
@@ -165,6 +144,23 @@ TFlt AdditiveRiskFunction::loss(Datum datum) const {
 
    //printf("datum:%d, Myloss:%f\n",datum.index(), totalLoss());
    return totalLoss;
+}
+
+void AdditiveRiskFunction::initPotentialEdges(Data data) {
+  THash<TInt, TCascade>& cascades = data.cascH;
+  int cascadesNum = cascades.Len();
+  //#pragma omp parallel for
+  for (int i=0;i<cascadesNum;i++) {
+     TCascade& cascade = cascades[i];
+     for (THash<TInt, THitInfo>::TIter srcNI = cascade.BegI(); srcNI < cascade.EndI(); srcNI++) {
+        for (THash<TInt, THitInfo>::TIter dstNI = srcNI; dstNI < cascade.EndI(); dstNI++) {
+           if (srcNI==dstNI) continue;
+           TIntPr key(srcNI.GetKey(), dstNI.GetKey());
+           if (dstNI.GetDat().Tm <= data.time)
+              potentialEdges.AddDat(key, 1.0);
+        } 
+     }
+  }
 }
 
 AdditiveRiskParameter::AdditiveRiskParameter() {

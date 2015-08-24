@@ -10,6 +10,7 @@ typedef struct {
    TRegularizer Regularizer;
    TFlt Mu;
    TInt latentVariableSize;   
+   TFlt dampingFactor;
 }NodeSoftMixCascadesFunctionConfigure;
 
 class NodeSoftMixCascadesFunction;
@@ -49,12 +50,15 @@ class NodeSoftMixCascadesFunction : public EMLikelihoodFunction<NodeSoftMixCasca
       void init(Data data, TInt NodeNm = 0);
       void initWeightParameter() { parameter.initWeightParameter();}
       void initAlphaParameter() { parameter.initAlphaParameter();}
+      void initPotentialEdges(Data);
       void heuristicInitAlphaParameter(Data, int);
       TFlt GetTopicAlpha(TInt srcNId, TInt dstNId, TInt topic) const { return parameter.GetTopicAlpha(srcNId, dstNId, topic);}
       TFlt GetAlpha(TInt srcNId, TInt dstNId, TInt topic) const { return parameter.GetAlpha(srcNId, dstNId, topic);}
 
       TimeShapingFunction *shapingFunction; 
+      THash<TIntPr,TFlt> potentialEdges;
       TFlt observedWindow;
+      TFlt dampingFactor;
       //NodeSoftMixCascadesParameter learningRate;
 };
 

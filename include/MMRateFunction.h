@@ -41,9 +41,11 @@ class MMRateFunction : public EMLikelihoodFunction<MMRateParameter> {
       void maximize();
       MMRateParameter& gradient(Datum datum);
       void set(MMRateFunctionConfigure configure);
+      void initPotentialEdges(Data);
 
       TimeShapingFunction *shapingFunction; 
       TFlt observedWindow;
+      THash<TIntPr,TFlt> potentialEdges;
 };
 
 #endif

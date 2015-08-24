@@ -35,6 +35,9 @@ class MixCascadesFunction : public EMLikelihoodFunction<MixCascadesParameter> {
       void set(MixCascadesFunctionConfigure configure);
       void init(TInt latentVariableSize);
       void initKPiParameter();
+      void initPotentialEdges(Data);
+
+      THash<TIntPr,TFlt> potentialEdges;
 };
 
 #endif

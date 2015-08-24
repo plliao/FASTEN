@@ -44,6 +44,7 @@ int main(int argc, char* argv[]) {
   const double Aging = Env.GetIfArgPrefixFlt("-a:", 1.0, "Aging factor for non-used edges (default:1.0)\n");
   const TRegularizer Regularizer = (TRegularizer)Env.GetIfArgPrefixInt("-r:", 0, "Regularizer\n0:no, 1:l2");
   const double Mu = Env.GetIfArgPrefixFlt("-mu:", 0.01, "Mu for regularizer (default:0.01)\n");
+  const double dampingFactor = Env.GetIfArgPrefixFlt("-df:", 2.0, "Damping factor (default:2.0)\n");
 
   const double Tol = Env.GetIfArgPrefixFlt("-tl:", 0.0005, "Tolerance (default:0.01)\n");
   const double MinAlpha = Env.GetIfArgPrefixFlt("-la:", 0.05, "Min alpha (default:0.05)\n");
@@ -78,6 +79,7 @@ int main(int argc, char* argv[]) {
   nodeSoftMixCascades.SetWindow(Window);
   nodeSoftMixCascades.SetObservedWindow(observedWindow);
   nodeSoftMixCascades.SetAging(Aging);
+  nodeSoftMixCascades.SetDampingFactor(dampingFactor);
 
   // load cascades from file
   nodeSoftMixCascades.LoadCascadesTxt(InFNm);

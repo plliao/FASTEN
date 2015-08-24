@@ -49,6 +49,7 @@ void Info::Infer(const TFltV& Steps) {
          }
       }
       Data data = {nodeInfo.NodeNmH, CascH, CascadesPositions, Steps[t]};
+      lossFunction.initPotentialEdges(data);
       pgd.Optimize(lossFunction, data);
 
       const THash<TIntPr, TFlt> &alphas = lossFunction.parameter.alphas;

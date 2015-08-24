@@ -338,6 +338,7 @@ void NodeSoftMixCascadesModel::Infer(const TFltV& Steps, const TStr& OutFNm) {
          }
       }
       Data data = {nodeInfo.NodeNmH, CascH, CascadesPositions, Steps[t]};
+      lossFunction.initPotentialEdges(data);
       em.Optimize(lossFunction, data);
 
       const THash<TInt, THash<TIntPr, TFlt> >& kAlphas = lossFunction.getParameter().kAlphas;

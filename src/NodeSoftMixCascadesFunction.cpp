@@ -20,13 +20,17 @@ TFlt NodeSoftMixCascadesFunction::JointLikelihood(Datum datum, TInt latentVariab
       if (Cascade.IsNode(dstNId) && Cascade.GetTm(dstNId) <= CurrentTime) dstTime = Cascade.GetTm(dstNId);
       else dstTime = Cascade.GetMaxTm() + observedWindow;
 
-      for (THash<TInt, THitInfo>::TIter CascadeNI = Cascade.BegI(); CascadeNI < Cascade.EndI(); CascadeNI++) {
+      TFlt nodePosition = 0.0;
+      for (THash<TInt, THitInfo>::TIter CascadeNI = Cascade.BegI(); CascadeNI < Cascade.EndI(); CascadeNI++, nodePosition++) {
          srcNId = CascadeNI.GetKey();
          srcTime = CascadeNI.GetDat().Tm;
 
          if (!shapingFunction->Before(srcTime,dstTime)) break; 
                         
-         TFlt alpha = GetTopicAlpha(srcNId, dstNId, latentVariable);
+         TFlt alpha = 0.0;
+         TIntPr key(srcNId, dstNId);
+         if (potentialEdges.IsKey(key))
+            alpha = GetTopicAlpha(srcNId, dstNId, latentVariable) / TMath::Power(dampingFactor, nodePosition);
 
          sumInLog += alpha * shapingFunction->Value(srcTime,dstTime);
          val += alpha * shapingFunction->Integral(srcTime,dstTime);
@@ -77,14 +81,15 @@ NodeSoftMixCascadesParameter& NodeSoftMixCascadesFunction::gradient(Datum datum)
 
       if (Cascade.IsNode(dstNId) && Cascade.GetTm(dstNId) <= CurrentTime) {
          dstTime = Cascade.GetTm(dstNId);
-         for (THash<TInt, THitInfo>::TIter CascadeNI = Cascade.BegI(); CascadeNI < Cascade.EndI(); CascadeNI++) {
+         TFlt nodePosition = 0.0;
+         for (THash<TInt, THitInfo>::TIter CascadeNI = Cascade.BegI(); CascadeNI < Cascade.EndI(); CascadeNI++, nodePosition++) {
             srcNId = CascadeNI.GetKey();
             srcTime = CascadeNI.GetDat().Tm;
 
             if (!shapingFunction->Before(srcTime,dstTime)) break; 
                          
             for (TInt i = 0; i < parameter.latentVariableSize; i++) {
-               TFlt alpha = parameter.GetTopicAlpha(srcNId, dstNId, i);
+               TFlt alpha = parameter.GetTopicAlpha(srcNId, dstNId, i) / TMath::Power(dampingFactor, nodePosition);
                dstAlphas.GetDat(i) += alpha * shapingFunction->Value(srcTime,dstTime);
                //printf("sumInLog:%f, alpha:%f, val:%f, initAlpha:%f\n",sumInLog(),alpha(),shapingFunction->Value(srcTime,dstTime)(),parameter.InitAlpha());
             }
@@ -97,20 +102,23 @@ NodeSoftMixCascadesParameter& NodeSoftMixCascadesFunction::gradient(Datum datum)
          kAlphasGradient.AddDat(i, THash<TIntPr, TFlt>());
       }
 
-      for (THash<TInt, THitInfo>::TIter CascadeNI = Cascade.BegI(); CascadeNI < Cascade.EndI(); CascadeNI++) {
+      TFlt nodePosition = 0.0;
+      for (THash<TInt, THitInfo>::TIter CascadeNI = Cascade.BegI(); CascadeNI < Cascade.EndI(); CascadeNI++, nodePosition++) {
          srcNId = CascadeNI.GetKey();
          srcTime = CascadeNI.GetDat().Tm;
    
          if (!shapingFunction->Before(srcTime,dstTime)) break; 
+         TIntPr key(srcNId, dstNId);
+         if (!potentialEdges.IsKey(key)) continue;
                            
          TIntPr alphaIndex; alphaIndex.Val1 = srcNId; alphaIndex.Val2 = dstNId;
          TFlt val = 0.0;
 
          for (TInt i = 0; i < parameter.latentVariableSize; i++) {
             if (Cascade.IsNode(dstNId) && Cascade.GetTm(dstNId) <= CurrentTime)
-               val = shapingFunction->Integral(srcTime,dstTime) - shapingFunction->Value(srcTime,dstTime) / dstAlphas.GetDat(i);
+               val = (shapingFunction->Integral(srcTime,dstTime) - shapingFunction->Value(srcTime,dstTime) / dstAlphas.GetDat(i)) / TMath::Power(dampingFactor, nodePosition);
             else
-               val = shapingFunction->Integral(srcTime,dstTime);
+               val = shapingFunction->Integral(srcTime,dstTime) / TMath::Power(dampingFactor, nodePosition);
             THash<TIntPr, TFlt>& alphaGradient = kAlphasGradient.GetDat(i);
             alphaGradient.AddDat(alphaIndex, val * latentDistributions.GetDat(datum.index).GetDat(i));
          }
@@ -129,7 +137,6 @@ NodeSoftMixCascadesParameter& NodeSoftMixCascadesFunction::gradient(Datum datum)
          }
       }
    }
-   //calculateRMSProp(0.1, learningRate, parameterGrad);   
 
    return parameterGrad;
 }
@@ -182,6 +189,7 @@ void NodeSoftMixCascadesFunction::maximize() {
 void NodeSoftMixCascadesFunction::set(NodeSoftMixCascadesFunctionConfigure configure) {
    latentVariableSize = configure.latentVariableSize;
    shapingFunction = configure.shapingFunction;
+   dampingFactor = configure.dampingFactor;
    parameter.set(configure);
    parameterGrad.set(configure);
 }
@@ -380,6 +388,23 @@ void NodeSoftMixCascadesFunction::heuristicInitAlphaParameter(Data data, int tim
    }
 }
 
+void NodeSoftMixCascadesFunction::initPotentialEdges(Data data) {
+  THash<TInt, TCascade>& cascades = data.cascH;
+  int cascadesNum = cascades.Len();
+  //#pragma omp parallel for
+  for (int i=0;i<cascadesNum;i++) {
+     TCascade& cascade = cascades[i];
+     for (THash<TInt, THitInfo>::TIter srcNI = cascade.BegI(); srcNI < cascade.EndI(); srcNI++) {
+        for (THash<TInt, THitInfo>::TIter dstNI = srcNI; dstNI < cascade.EndI(); dstNI++) {
+           if (srcNI==dstNI) continue;
+           TIntPr key(srcNI.GetKey(), dstNI.GetKey());
+           if (dstNI.GetDat().Tm <= data.time)
+              potentialEdges.AddDat(key, 1.0);
+        } 
+     }
+  }
+}
+
 void NodeSoftMixCascadesParameter::reset() {
    kAlphas.Clr();
 }
@@ -425,6 +450,54 @@ NodeSoftMixCascadesParameter& NodeSoftMixCascadesParameter::operator *= (const T
 }
 
 NodeSoftMixCascadesParameter& NodeSoftMixCascadesParameter::projectedlyUpdateGradient(const NodeSoftMixCascadesParameter& p) {
+   /*THash<TIntPr,TFlt> regularizedTerm = THash<TIntPr,TFlt>();
+   if (Regularizer and latentVariableSize > 1) {
+      for (THash<TInt, THash<TIntPr,TFlt> >::TIter AI = p.kAlphas.BegI(); !AI.IsEnd(); AI++) {
+         for (THash<TIntPr,TFlt>::TIter aI = AI.GetDat().BegI(); !aI.IsEnd(); aI++) {
+            TIntPr alphaIndex = aI.GetKey();
+            if (regularizedTerm.IsKey(alphaIndex)) continue;
+            TFlt maxAlpha = -DBL_MAX;
+            TFlt totalAlpha = 0.0, totalAddTimes = 0.0;
+            TInt maxIndex = -1;
+        
+            for (TInt i=0;i<latentVariableSize;i++) {               
+               THash<TIntPr,TFlt>& alphas = kAlphas.GetDat(i);
+               if (alphas.IsKey(alphaIndex)) {
+                  TFlt alpha = alphas.GetDat(alphaIndex);
+                  if (alpha < MinAlpha) continue;
+                  totalAlpha += alpha;
+                  totalAddTimes += 1.0;
+                  if (alpha > maxAlpha) {
+                     maxAlpha = alpha;
+                     maxIndex = i;
+                  }
+               }
+            }
+
+            if (totalAddTimes==1.0) continue;
+
+            for (TInt i=0;i<latentVariableSize;i++) {
+               THash<TIntPr,TFlt>& alphas = kAlphas.GetDat(i);
+               if (alphas.IsKey(alphaIndex)) {
+                  TFlt& alpha = alphas.GetDat(alphaIndex);
+                  if (alpha < MinAlpha) continue;
+                  if (i==maxIndex) {
+                     TFlt averageAlpha = (totalAlpha - maxAlpha) / (totalAddTimes - 1.0);
+                     TFlt diff = maxAlpha - averageAlpha;
+                     if (diff < Tol) continue;
+                     alpha += Mu * 1.0 / diff;
+                  }
+                  else {
+                     TFlt diff = maxAlpha - alpha;
+                     if (diff < Tol) continue;
+                     alpha -= Mu * 1.0 / diff;
+                  }
+               }
+            }
+            regularizedTerm.AddDat(alphaIndex, 1.0);
+         }
+      }
+   }*/
    for(THash<TInt, THash<TIntPr,TFlt> >::TIter AI = p.kAlphas.BegI(); !AI.IsEnd(); AI++) {
       TInt key = AI.GetKey();
       THash<TIntPr,TFlt>& alphas = kAlphas.GetDat(key);
@@ -434,7 +507,8 @@ NodeSoftMixCascadesParameter& NodeSoftMixCascadesParameter::projectedlyUpdateGra
          if (alphas.IsKey(alphaIndex)) value = alphas.GetDat(alphaIndex); 
          else value = InitAlpha;
 
-         alpha = value - (alphaGradient + (Regularizer ? Mu : TFlt(0.0)) * alpha);
+         //alpha = value - (alphaGradient + (Regularizer ? Mu : TFlt(0.0)) * alpha);
+         alpha = value - alphaGradient;
 
          if (alpha < Tol) alpha = Tol;
          if (alpha > MaxAlpha) alpha = MaxAlpha;
