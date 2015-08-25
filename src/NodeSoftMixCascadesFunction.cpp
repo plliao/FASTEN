@@ -6,7 +6,9 @@ TFlt NodeSoftMixCascadesFunction::JointLikelihood(Datum datum, TInt latentVariab
    THash<TInt, TNodeInfo> &NodeNmH = datum.NodeNmH;
    double totalLoss = 0.0;
 
-   TInt startNId = Cascade.BegI().GetKey();
+   //MMRate type
+   TInt startNId = 0;
+   //TInt startNId = Cascade.BegI().GetKey();
 
    int nodeSize = NodeNmH.Len();
    #pragma omp parallel for reduction(+:totalLoss)
@@ -53,7 +55,9 @@ NodeSoftMixCascadesParameter& NodeSoftMixCascadesFunction::gradient(Datum datum)
    THash<TInt, TNodeInfo> &NodeNmH = datum.NodeNmH;
  
    parameterGrad.reset();
-   TInt startNId = Cascade.BegI().GetKey();
+   //TInt startNId = Cascade.BegI().GetKey();
+   //MMRate type
+   TInt startNId = 0;
    if (!parameterGrad.nodeWeights.IsKey(startNId)) {
       parameterGrad.nodeWeights.AddDat(startNId, THash<TInt,TFlt>());
       parameterGrad.nodeSampledTimes.AddDat(startNId, 0.0);

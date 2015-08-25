@@ -90,10 +90,9 @@ void NodeSoftMixCascadesModel::GenCascade(TCascade& C) {
 		InitTime = TFlt::Rnd.GetUniDev() * TotalTime; // random starting point <TotalTime
 		GlobalTime = InitTime;
 
-		StartNId = Network.GetRndNId();
-		InfectedNIdH.AddDat(StartNId) = GlobalTime;
-
-                THash<TInt,TFlt>& weight = lossFunction.parameter.nodeWeights.GetDat(StartNId);
+                //THash<TInt,TFlt>& weight = lossFunction.parameter.nodeWeights.GetDat(StartNId);
+                //MMRate type
+                THash<TInt,TFlt>& weight = lossFunction.parameter.nodeWeights.GetDat(0);
                 TInt topic = -1;
                 TFlt sampledValue = TFlt::Rnd.GetUniDev();
                 for (THash<TInt,TFlt>::TIter VI = weight.BegI(); !VI.IsEnd(); VI++) {
@@ -104,13 +103,19 @@ void NodeSoftMixCascadesModel::GenCascade(TCascade& C) {
                    }
                 }
                 //printf("start NId %d, topic %d\n", StartNId, topic());
+                TInt selectedIndex = TInt::Rnd.GetUniDevInt(outputEdgeMap.GetDat(topic).Len());
+		StartNId = outputEdgeMap.GetDat(topic).GetDat(selectedIndex);
+		InfectedNIdH.AddDat(StartNId) = GlobalTime;
 
+
+                TFlt nodePosition = 0.0;
 		while (true) {
 			// sort by time & get the oldest node that did not run infection
 			InfectedNIdH.SortByDat(true);
 			const int& NId = InfectedNIdH.BegI().GetKey();
 			GlobalTime = InfectedNIdH.BegI().GetDat();
 
+                        //printf("source NId %d, topic %d\n", NId, topic());
 			// all the nodes has run infection
 			if ( GlobalTime >= TFlt::GetMn(TotalTime, InitTime+Window) )
 				break;
@@ -133,6 +138,7 @@ void NodeSoftMixCascadesModel::GenCascade(TCascade& C) {
 				else alpha = (double)lossFunction.GetAlpha(NId, DstNId, topic);
 				if (verbose) { printf("GlobalTime:%f, nodes:%d->%d, alpha:%f\n", GlobalTime, NId, DstNId, alpha); }
 
+                                alpha /= TMath::Power(nodeSoftMixCascadesFunctionConfigure.dampingFactor, nodePosition);
 				if (alpha <= edgeInfo.MinAlpha) { continue; }
 
 				// not infecting the parent
@@ -168,15 +174,22 @@ void NodeSoftMixCascadesModel::GenCascade(TCascade& C) {
 					if ( t2 > t1 && t2 < TFlt::GetMn(InitTime+Window, TotalTime)) {
 						InfectedNIdH.GetDat(DstNId) = t1;
 						InfectedBy.GetDat(DstNId) = NId;
+                                                TIntPr index(NId,DstNId);
+                                                usedEdges.GetDat(topic).AddDat(index,1.0);
 					}
 				} else {
 					InfectedNIdH.AddDat(DstNId) = t1;
 					InfectedBy.AddDat(DstNId) = NId;
+                                        if (t1 < TFlt::GetMn(InitTime+Window, TotalTime)) {
+                                           TIntPr index(NId,DstNId);
+                                           usedEdges.GetDat(topic).AddDat(index,1.0);
+                                        }
 				}
 			}
 
 			// we cannot delete key (otherwise, we cannot sort), so we assign a big time (InitTime + window cut-off)
 			InfectedNIdH.GetDat(NId) = TFlt::GetMn(InitTime+Window, TotalTime);
+                        nodePosition++;
 		}
     }
 
@@ -247,9 +260,19 @@ void NodeSoftMixCascadesModel::GenerateGroundTruth(const int& TNetwork, const in
           }
 
 	  if (verbose) { printf("Network structure has been generated succesfully!\n"); }
+          usedEdges.AddDat(i, THash<TIntPr,TFlt>()); 
    }
    lossFunction.initAlphaParameter();
    lossFunction.initWeightParameter();
+   
+   for (TInt i=0; i < eMConfigure.latentVariableSize; i++) {
+      outputEdgeMap.AddDat(i, THash<TInt, TInt>());
+      TInt edgeNum = 0;
+      for (THash<TIntPr,TFlt>::TIter EI = lossFunction.parameter.kAlphas.GetDat(i).BegI(); !EI.IsEnd(); EI++,edgeNum++) {
+         TInt srcNId = EI.GetKey().Val1;
+         outputEdgeMap.GetDat(i).AddDat(edgeNum, srcNId);
+      }
+   }
 }
 
 void NodeSoftMixCascadesModel::SaveGroundTruth(TStr fileNm) {
@@ -277,7 +300,7 @@ void NodeSoftMixCascadesModel::SaveGroundTruth(TStr fileNm) {
          if (alpha > maxValue) maxValue = alpha;
 
          printf("\t\ttopic %d alpha:%f \n", latentVariable(), alpha());
-         if (alpha > edgeInfo.MinAlpha ) {
+         if (alpha > edgeInfo.MinAlpha and usedEdges.GetDat(latentVariable).IsKey(index)) {
             TFOut FOut(fileNm + TStr::Fmt("-%d-network.txt", latentVariable+1), true);
             FOut.PutStr(TStr::Fmt("%d,%d,%f,%f\n", srcNId, dstNId, 0.0, alpha));  
          }
@@ -344,14 +367,16 @@ void NodeSoftMixCascadesModel::Infer(const TFltV& Steps, const TStr& OutFNm) {
       const THash<TInt, THash<TIntPr, TFlt> >& kAlphas = lossFunction.getParameter().kAlphas;
 
       THash<TInt, TFlt> kPi;
-      for (TInt topic = 0; topic < eMConfigure.latentVariableSize; topic ++) kPi.AddDat(topic, 0.0);
+      /*for (TInt topic = 0; topic < eMConfigure.latentVariableSize; topic ++) kPi.AddDat(topic, 0.0);
       for (TIntFltH::TIter PI = CascadesPositions.BegI(); !PI.IsEnd(); PI++) {
          TInt NId = CascH[PI.GetKey()].BegI().GetKey();
          for (THash<TInt, TFlt>::TIter VI = kPi.BegI(); !VI.IsEnd(); VI++) {
             VI.GetDat() += lossFunction.parameter.nodeWeights.GetDat(NId).GetDat(VI.GetKey());
          }
       } 
-      for (TInt topic = 0; topic < eMConfigure.latentVariableSize; topic ++) kPi.GetDat(topic) /= double(CascadesPositions.Len());
+      for (TInt topic = 0; topic < eMConfigure.latentVariableSize; topic ++) kPi.GetDat(topic) /= double(CascadesPositions.Len());*/
+      //MMRate type
+      for (TInt topic = 0; topic < eMConfigure.latentVariableSize; topic ++) kPi.AddDat(topic, lossFunction.parameter.nodeWeights.GetDat(0).GetDat(topic));
 
       for (THash<TInt, THash<TIntPr, TFlt> >::TIter NI = kAlphas.BegI(); !NI.IsEnd(); NI++) {
          TInt key = NI.GetKey();

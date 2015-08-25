@@ -13,6 +13,8 @@ class NodeSoftMixCascadesModel {
       EdgeInfo edgeInfo;
       THash<TInt, TCascade> CascH;
       TStrFltFltHNEDNet Network, InferredNetwork, MaxNetwork; 
+      THash<TInt, THash<TIntPr,TFlt> > usedEdges;
+      THash<TInt, THash<TInt,TInt> > outputEdgeMap;
      
       TFlt Window, TotalTime; 
       TFlt Delta, K;

@@ -29,6 +29,7 @@ int main(int argc, char* argv[]) {
   const TStr RAlphas = Env.GetIfArgPrefixStr("-ar:", TStr("0.01;1"), "Minimum and maximum alpha value (default:0.01;1)\n"); // alpha range
   const double k = Env.GetIfArgPrefixFlt("-k:", 1.0, "Shape parameter k for Weibull distribution (-m:3)\n"); // k for weibull
   const double Delta = Env.GetIfArgPrefixFlt("-d:", 1.0, "Delta for power-law (default:1)\n"); // delta for power law
+  const double dampingFactor = Env.GetIfArgPrefixFlt("-df:", 2.0, "Damping factor (default:2.0)\n");
   
   const int latentVariableSize  = Env.GetIfArgPrefixInt("-K:", 3, "Latent variable size");
   
@@ -47,6 +48,7 @@ int main(int argc, char* argv[]) {
   nodeSoftMixCascades.SetModel(Model);
   nodeSoftMixCascades.SetDelta(Delta);
   nodeSoftMixCascades.SetK(k);
+  nodeSoftMixCascades.SetDampingFactor(dampingFactor);
 	
   TStrV RAlphasV; RAlphas.SplitOnAllCh(';', RAlphasV);
   TFlt MaxAlpha = RAlphasV[1].GetFlt(); 
