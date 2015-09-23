@@ -8,6 +8,8 @@ We also provide several state of the arts of diffusion network models listed bel
 2. MMRate
 3. MixCascades
 
+Please refer to my paper for more details.
+
 ## Dependency
 1. Openmp
 2. SNAP 2.3 Library @ http://snap.stanford.edu/snap/download.html
@@ -44,6 +46,22 @@ Please check all model parameters listed in the corresponging cpp file.
 We provide an example in *exp.sh* script for you to refer.
 
 Note that you should make the required directories to run the script i.e. `mkdir plot result data`.
+
+### Program Descriptions
+#### Models
+> InfoPath.cpp: main file of InfoPath model  
+> MMRate.cpp: main file of MMRate model  
+> MixCascades.cpp: main file of MixCascades model  
+> DecayCascades.cpp: main file of DecayCascades model
+
+#### Evaluations
+> EvaluationAUC.cpp: PRC AUC evaluation main file  
+> EvaluationMSE.cpp: MSE evaluation main file  
+> EvaluationMultiple.cpp: multiple network evaluation main file  
+
+#### Utility
+> generate_DCnets.cpp: cascades and network generator using our diffusion model  
+> DataMerger.cpp: the program to merge several cascades and networks
 
 ## Reference
 1. *InfoPath*, Structure and Dynamics of Information Pathways in On-line Media in WSDM 2013
