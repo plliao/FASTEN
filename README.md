@@ -15,6 +15,13 @@ Please refer to my paper for more details.
 2. SNAP 2.3 Library @ http://snap.stanford.edu/snap/download.html
 3. Gnuplot
 
+Note:  
+You should compile the SNAP core, cascdynetinf and kronecker before doing installation.  
+  * SNAP core is in *\<SNAP Library Path\>/snap-core* directory.  
+  * cascdynetinf and kronecker are in *\<SNAP Library Path\>/snap-adv* directory.  
+
+After compilation put the compiled objective files i.e. Snap.o, cascdynetinf.o and kronecker.o into *lib* directory. 
+
 ## Installation
 
 Get codes from Github.
@@ -49,19 +56,19 @@ Note that you should make the required directories to run the script i.e. `mkdir
 
 ### Program Descriptions
 #### Models
-> InfoPath.cpp: main file of InfoPath model  
-> MMRate.cpp: main file of MMRate model  
-> MixCascades.cpp: main file of MixCascades model  
-> DecayCascades.cpp: main file of DecayCascades model
+* InfoPath.cpp: main file of InfoPath model  
+* MMRate.cpp: main file of MMRate model  
+* MixCascades.cpp: main file of MixCascades model  
+* DecayCascades.cpp: main file of DecayCascades model
 
 #### Evaluations
-> EvaluationAUC.cpp: PRC AUC evaluation main file  
-> EvaluationMSE.cpp: MSE evaluation main file  
-> EvaluationMultiple.cpp: multiple network evaluation main file  
+* EvaluationAUC.cpp: PRC AUC evaluation main file  
+* EvaluationMSE.cpp: MSE evaluation main file  
+* EvaluationMultiple.cpp: multiple network evaluation main file  
 
 #### Utility
-> generate_DCnets.cpp: cascades and network generator using our diffusion model  
-> DataMerger.cpp: the program to merge several cascades and networks
+* generate_DCnets.cpp: cascades and network generator using our diffusion model  
+* DataMerger.cpp: the program to merge several cascades and networks
 
 ## Reference
 1. *InfoPath*, Structure and Dynamics of Information Pathways in On-line Media in WSDM 2013
