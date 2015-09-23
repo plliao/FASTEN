@@ -17,19 +17,13 @@ void DecayCascadesModel::SaveInferred(const TStr& OutFNm) {
    InfoPathFileIO::SaveNetwork(OutFNm, InferredNetwork, nodeInfo, edgeInfo);
 }
 
-void DecayCascadesModel::SaveWeights(const TStr& OutFNm) {
+void DecayCascadesModel::SavePriorTopicProbability(const TStr& OutFNm) {
    TFOut FOut(OutFNm);
-   THash<TInt, THash<TInt,TFlt> >& nodeWeights = lossFunction.parameter.nodeWeights;
-   for (THash<TInt, THash<TInt,TFlt> >::TIter WI = nodeWeights.BegI(); !WI.IsEnd(); WI++) {
-      THash<TInt,TFlt>& weight = WI.GetDat();
-      FOut.PutStr(TStr::Fmt("%d;", WI.GetKey()));
-
-      TInt size = weight.Len();
-      for (THash<TInt,TFlt>::TIter VI = weight.BegI(); !VI.IsEnd(); VI++) {
-         FOut.PutStr(TStr::Fmt("%f",VI.GetDat()));
-         if (VI.GetKey()!=size-1) FOut.PutStr(",");
-      }
-      FOut.PutStr("\n");
+   THash<TInt, TFlt>& priorTopicProbability = lossFunction.parameter.priorTopicProbability;
+   TInt size = priorTopicProbability.Len();
+   for (THash<TInt, TFlt>::TIter PI = priorTopicProbability.BegI(); !PI.IsEnd(); PI++) {
+      FOut.PutStr(TStr::Fmt("%f",PI.GetDat()));
+      if (PI.GetKey()!=size-1) FOut.PutStr(",");
    }
 }
 
@@ -51,20 +45,18 @@ void DecayCascadesModel::ReadAlphas(const TStr& InFNm) {
   }
 }
 
-void DecayCascadesModel::ReadWeights(const TStr& InFNm) {
+void DecayCascadesModel::ReadPriorTopicProbability(const TStr& InFNm) {
   TFIn FIn(InFNm);
   TStr line; 
   DecayCascadesParameter& parameter = lossFunction.parameter;
   while (!FIn.Eof()) {
      FIn.GetNextLn(line);
-     TStrV tokens, weightStrV;
-     line.SplitOnAllCh(';', tokens);
-     tokens[1].SplitOnAllCh(',', weightStrV);
+     TStrV tokens;
+     line.SplitOnAllCh(',', tokens);
 
-     TInt NId = tokens[0].GetInt();
-     TInt size = weightStrV.Len();
+     TInt size = tokens.Len();
      for (TInt i=0; i<size; i++) {
-        parameter.nodeWeights.GetDat(NId).AddDat(i, weightStrV[i].GetFlt());
+        parameter.priorTopicProbability.AddDat(i, tokens[i].GetFlt());
      }
   }
 }
@@ -90,10 +82,9 @@ void DecayCascadesModel::GenCascade(TCascade& C) {
 		InitTime = TFlt::Rnd.GetUniDev() * TotalTime; // random starting point <TotalTime
 		GlobalTime = InitTime;
 
-                THash<TInt,TFlt>& weight = lossFunction.parameter.nodeWeights.GetDat(0);
                 TInt topic = -1;
                 TFlt sampledValue = TFlt::Rnd.GetUniDev();
-                for (THash<TInt,TFlt>::TIter VI = weight.BegI(); !VI.IsEnd(); VI++) {
+                for (THash<TInt,TFlt>::TIter VI = lossFunction.parameter.priorTopicProbability.BegI(); !VI.IsEnd(); VI++) {
                    sampledValue -= VI.GetDat();
                    if (sampledValue <= 0.0) {
                       topic = VI.GetKey();
@@ -136,7 +127,7 @@ void DecayCascadesModel::GenCascade(TCascade& C) {
 				else alpha = (double)lossFunction.GetAlpha(NId, DstNId, topic);
 				if (verbose) { printf("GlobalTime:%f, nodes:%d->%d, alpha:%f\n", GlobalTime, NId, DstNId, alpha); }
 
-                                alpha /= TMath::Power(decayCascadesFunctionConfigure.dampingFactor, nodePosition);
+                                alpha /= TMath::Power(decayCascadesFunctionConfigure.decayRatio, nodePosition);
 				if (alpha <= edgeInfo.MinAlpha) { continue; }
 
 				// not infecting the parent
@@ -261,7 +252,7 @@ void DecayCascadesModel::GenerateGroundTruth(const int& TNetwork, const int& NNo
           usedEdges.AddDat(i, THash<TIntPr,TFlt>()); 
    }
    lossFunction.initAlphaParameter();
-   lossFunction.initWeightParameter();
+   lossFunction.initPriorTopicProbabilityParameter();
    
    for (TInt i=0; i < eMConfigure.latentVariableSize; i++) {
       outputEdgeMap.AddDat(i, THash<TInt, TInt>());
@@ -336,7 +327,7 @@ void DecayCascadesModel::Infer(const TFltV& Steps, const TStr& OutFNm) {
    TStr expName, resultDir, outName, modelName;
    OutFNm.SplitOnCh(resultDir, '/', outName);
    outName.SplitOnCh(expName, '-', modelName);
-   lossFunction.initWeightParameter();
+   lossFunction.initPriorTopicProbabilityParameter();
    lossFunction.InitLatentVariable(data, eMConfigure);
   
    TSampling Sampling = eMConfigure.pGDConfigure.sampling;
@@ -359,7 +350,7 @@ void DecayCascadesModel::Infer(const TFltV& Steps, const TStr& OutFNm) {
       const THash<TInt, THash<TIntPr, TFlt> >& kAlphas = lossFunction.getParameter().kAlphas;
 
       THash<TInt, TFlt> kPi;
-      for (TInt topic = 0; topic < eMConfigure.latentVariableSize; topic ++) kPi.AddDat(topic, lossFunction.parameter.nodeWeights.GetDat(0).GetDat(topic));
+      for (TInt topic = 0; topic < eMConfigure.latentVariableSize; topic ++) kPi.AddDat(topic, lossFunction.parameter.priorTopicProbability.GetDat(topic));
 
       for (THash<TInt, THash<TIntPr, TFlt> >::TIter NI = kAlphas.BegI(); !NI.IsEnd(); NI++) {
          TInt key = NI.GetKey();

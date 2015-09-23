@@ -15,7 +15,6 @@ int main(int argc, char* argv[]) {
 
   const TModel Model = (TModel)Env.GetIfArgPrefixInt("-m:", 0, "0:exponential, 1:power law, 2:rayleigh, 3:weibull");
   const double Delta = Env.GetIfArgPrefixFlt("-d:", 1.0, "Delta for power-law (default:1)\n"); // delta for power law
-  //const double k = Env.GetIfArgPrefixFlt("-k:", 1.0, "Shape parameter k for Weibull distribution for -m:3 (default:1)\n"); // k for weibull
   
   const int latentVariableSize  = Env.GetIfArgPrefixInt("-K:", 10, "Latent variable size");
 
@@ -43,17 +42,12 @@ int main(int argc, char* argv[]) {
   const double Aging = Env.GetIfArgPrefixFlt("-a:", 1.0, "Aging factor for non-used edges (default:1.0)\n");
   const TRegularizer Regularizer = (TRegularizer)Env.GetIfArgPrefixInt("-r:", 0, "Regularizer\n0:no, 1:l2");
   const double Mu = Env.GetIfArgPrefixFlt("-mu:", 0.01, "Mu for regularizer (default:0.01)\n");
-  const double dampingFactor = Env.GetIfArgPrefixFlt("-df:", 3.0, "Damping factor (default:3.0)\n");
+  const double decayRatio = Env.GetIfArgPrefixFlt("-df:", 3.0, "Damping factor (default:3.0)\n");
 
   const double Tol = Env.GetIfArgPrefixFlt("-tl:", 0.0005, "Tolerance (default:0.01)\n");
   const double MinAlpha = Env.GetIfArgPrefixFlt("-la:", 0.05, "Min alpha (default:0.05)\n");
   const double MaxAlpha = Env.GetIfArgPrefixFlt("-ua:", 100, "Maximum alpha (default:100)\n");
   const double InitAlpha = Env.GetIfArgPrefixFlt("-ia:", 0.01, "Initial alpha (default:0.01)\n");
-
-  //const int SaveOnlyEdges = Env.GetIfArgPrefixInt("-oe:", 0, "Save only edges, not nodes\n:0:edges and nodes, 1:only edges (default:0)\n");
-
-  /*const int TakeAdditional = Env.GetIfArgPrefixInt("-s:", 1, "How much additional files to create?\n\
-    0:no plots, 1:precision-recall plot, 2:accuracy plot, 3:mae plot, 4:mse plot, 5:all plots\n");*/
 
   DecayCascadesModel decayCascades;
   printf("\nLoading input cascades: %s\n", InFNm.CStr());
@@ -77,7 +71,7 @@ int main(int argc, char* argv[]) {
   decayCascades.SetWindow(Window);
   decayCascades.SetObservedWindow(observedWindow);
   decayCascades.SetAging(Aging);
-  decayCascades.SetDampingFactor(dampingFactor);
+  decayCascades.SetDecayRatio(decayRatio);
 
   // load cascades from file
   decayCascades.LoadCascadesTxt(InFNm);
@@ -195,7 +189,7 @@ int main(int argc, char* argv[]) {
   decayCascades.Init();
   decayCascades.Infer(Steps, OutFNm);
   decayCascades.SaveInferred(TStr::Fmt("%s.txt", OutFNm.CStr()));
-  decayCascades.SaveWeights(TStr::Fmt("%s_Weights.txt", OutFNm.CStr()));
+  decayCascades.SavePriorTopicProbability(TStr::Fmt("%s_PriorTopicProbability.txt", OutFNm.CStr()));
   
   Catch
   printf("\nrun time: %s (%s)\n", ExeTm.GetTmStr(), TSecTm::GetCurTm().GetTmStr().CStr());

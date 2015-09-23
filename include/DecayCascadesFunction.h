@@ -10,7 +10,7 @@ typedef struct {
    TRegularizer Regularizer;
    TFlt Mu;
    TInt latentVariableSize;   
-   TFlt dampingFactor;
+   TFlt decayRatio;
 }DecayCascadesFunctionConfigure;
 
 class DecayCascadesFunction;
@@ -24,7 +24,7 @@ class DecayCascadesParameter {
       DecayCascadesParameter& projectedlyUpdateGradient(const DecayCascadesParameter&);
       void set(DecayCascadesFunctionConfigure configure);
       void init(Data data, TInt NodeNm = 0);
-      void initWeightParameter();
+      void initPriorTopicProbabilityParameter();
       void initAlphaParameter();
       void reset();
 
@@ -36,8 +36,8 @@ class DecayCascadesParameter {
       TFlt Mu;
       TInt latentVariableSize;   
       THash<TInt, THash<TIntPr,TFlt> > kAlphas;
-      THash<TInt, THash<TInt, TFlt> > nodeWeights;
-      THash<TInt, TFlt> nodeSampledTimes;
+      THash<TInt, TFlt> priorTopicProbability;
+      TFlt sampledTimes;
 };
 
 class DecayCascadesFunction : public EMLikelihoodFunction<DecayCascadesParameter> {
@@ -45,10 +45,9 @@ class DecayCascadesFunction : public EMLikelihoodFunction<DecayCascadesParameter
       TFlt JointLikelihood(Datum datum, TInt latentVariable) const;
       void maximize() ;
       DecayCascadesParameter& gradient(Datum datum);
-      void calculateRMSProp(TFlt, DecayCascadesParameter&, DecayCascadesParameter&);
       void set(DecayCascadesFunctionConfigure configure);
       void init(Data data, TInt NodeNm = 0);
-      void initWeightParameter() { parameter.initWeightParameter();}
+      void initPriorTopicProbabilityParameter() { parameter.initPriorTopicProbabilityParameter();}
       void initAlphaParameter() { parameter.initAlphaParameter();}
       void initPotentialEdges(Data);
       TFlt GetTopicAlpha(TInt srcNId, TInt dstNId, TInt topic) const { return parameter.GetTopicAlpha(srcNId, dstNId, topic);}
@@ -57,7 +56,7 @@ class DecayCascadesFunction : public EMLikelihoodFunction<DecayCascadesParameter
       TimeShapingFunction *shapingFunction; 
       THash<TIntPr,TFlt> potentialEdges;
       TFlt observedWindow;
-      TFlt dampingFactor;
+      TFlt decayRatio;
 };
 
 #endif

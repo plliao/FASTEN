@@ -29,8 +29,8 @@ class DecayCascadesModel {
       void LoadCascadesTxt(const TStr& InFNm);
       void LoadGroundTruthTxt(const TStr& InFNm);
       void SaveInferred(const TStr& OutFNm);
-      void SaveWeights(const TStr& OutFNm);
-      void ReadWeights(const TStr& OutFNm);
+      void SavePriorTopicProbability(const TStr& OutFNm);
+      void ReadPriorTopicProbability(const TStr& OutFNm);
       void ReadAlphas(const TStr& OutFNm);
 
       void GenCascade(TCascade& c);
@@ -55,7 +55,7 @@ class DecayCascadesModel {
       void SetAging(const double& aging) { Aging = aging; }
       void SetRegularizer(const TRegularizer& reg) { decayCascadesFunctionConfigure.Regularizer = reg; }
       void SetMu(const double& mu) { decayCascadesFunctionConfigure.Mu = mu; }
-      void SetDampingFactor(const double& df) { decayCascadesFunctionConfigure.dampingFactor = df; }
+      void SetDecayRatio(const double& df) { decayCascadesFunctionConfigure.decayRatio = df; }
       void SetTolerance(const double& tol) { decayCascadesFunctionConfigure.Tol = tol; }
       void SetMaxAlpha(const double& ma) { decayCascadesFunctionConfigure.MaxAlpha = edgeInfo.MaxAlpha = ma; }
       void SetMinAlpha(const double& ma) { decayCascadesFunctionConfigure.MinAlpha = edgeInfo.MinAlpha = ma; }
