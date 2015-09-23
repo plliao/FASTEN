@@ -17,7 +17,7 @@ We also provide several state of the arts of diffusion network models listed bel
 
 Get codes from Github.
 
-`git clone`
+`git clone https://github.com/plliao/DecayCascades.git`
 
 `cd DecayCascades`
 
