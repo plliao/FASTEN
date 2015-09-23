@@ -1,5 +1,5 @@
 #include "stdafx.h"
-#include <Info.h>
+#include <InfoPathModel.h>
 
 int main(int argc, char* argv[]) {
   Env = TEnv(argc, argv, TNotify::StdNotify);
@@ -45,40 +45,40 @@ int main(int argc, char* argv[]) {
   const double MaxAlpha = Env.GetIfArgPrefixFlt("-ua:", 100, "Maximum alpha (default:100)\n");
   const double InitAlpha = Env.GetIfArgPrefixFlt("-ia:", 0.01, "Initial alpha (default:0.01)\n");
 
-  Info info;
+  InfoPathModel infoPathModel;
   printf("\nLoading input cascades: %s\n", InFNm.CStr());
 
-  info.SetModel(Model);
-  info.SetDelta(Delta);
-  info.SetSampling(TSam);
-  info.SetMaxIterNm(Iters);
-  info.SetBatchSize(BatchLen);
-  info.SetLearningRate(lr);
-  info.SetParamSampling(ParamSampling);
+  infoPathModel.SetModel(Model);
+  infoPathModel.SetDelta(Delta);
+  infoPathModel.SetSampling(TSam);
+  infoPathModel.SetMaxIterNm(Iters);
+  infoPathModel.SetBatchSize(BatchLen);
+  infoPathModel.SetLearningRate(lr);
+  infoPathModel.SetParamSampling(ParamSampling);
 
-  info.SetTolerance(Tol);
-  info.SetMaxAlpha(MaxAlpha);
-  info.SetMinAlpha(MinAlpha);
-  info.SetInitAlpha(InitAlpha);
-  info.SetRegularizer(Regularizer);
-  info.SetMu(Mu);
-  info.SetWindow(Window);
-  info.SetObservedWindow(observedWindow);
-  info.SetAging(Aging);
+  infoPathModel.SetTolerance(Tol);
+  infoPathModel.SetMaxAlpha(MaxAlpha);
+  infoPathModel.SetMinAlpha(MinAlpha);
+  infoPathModel.SetInitAlpha(InitAlpha);
+  infoPathModel.SetRegularizer(Regularizer);
+  infoPathModel.SetMu(Mu);
+  infoPathModel.SetWindow(Window);
+  infoPathModel.SetObservedWindow(observedWindow);
+  infoPathModel.SetAging(Aging);
 
   // load cascades from file
-  info.LoadCascadesTxt(InFNm);
+  infoPathModel.LoadCascadesTxt(InFNm);
   
-  printf("cascades:%d\nRunning Stochastic Network Inference..\n", info.GetCascs());
+  printf("cascades:%d\nRunning Stochastic Network Inference..\n", infoPathModel.GetCascs());
 
   double MaxTime = TFlt::Mn;
   double MinTime = TFlt::Mx;
 
   if (MaxTimeStr.EqI("-1")) {
     // find maximum time across cascades
-    for (int i=0; i<info.GetCascs(); i++) {
-      if (info.CascH[i].GetMaxTm() > MaxTime) {
-        MaxTime = info.CascH[i].GetMaxTm();
+    for (int i=0; i<infoPathModel.GetCascs(); i++) {
+      if (infoPathModel.CascH[i].GetMaxTm() > MaxTime) {
+        MaxTime = infoPathModel.CascH[i].GetMaxTm();
       }
     }
   } else {
@@ -91,9 +91,9 @@ int main(int argc, char* argv[]) {
   if (MinTimeStr.EqI("-1")) {
     // find minimum time across cascades
     MinTime = TFlt::Mx;
-    for (int i=0; i<info.GetCascs(); i++) {
-      if (info.CascH[i].GetMinTm() < MinTime && info.CascH[i].GetMinTm()!=0) {
-        MinTime = info.CascH[i].GetMinTm();
+    for (int i=0; i<infoPathModel.GetCascs(); i++) {
+      if (infoPathModel.CascH[i].GetMinTm() < MinTime && infoPathModel.CascH[i].GetMinTm()!=0) {
+        MinTime = infoPathModel.CascH[i].GetMinTm();
       }
     }
   } else {
@@ -134,9 +134,9 @@ int main(int argc, char* argv[]) {
       case INFECTION_STEP:
         // copy infections
         if (verbose) { printf("Generating infections vector...\n"); }
-        for (int i=0; i<info.GetCascs(); i++) {
-          for (int j=0; j<info.CascH[i].Len() && info.CascH[i].NIdHitH[j].Tm < MaxTime; j++) {
-            InfectionsV.Add(info.CascH[i].NIdHitH[j].Tm);
+        for (int i=0; i<infoPathModel.GetCascs(); i++) {
+          for (int j=0; j<infoPathModel.CascH[i].Len() && infoPathModel.CascH[i].NIdHitH[j].Tm < MaxTime; j++) {
+            InfectionsV.Add(infoPathModel.CascH[i].NIdHitH[j].Tm);
           }
         }
 
@@ -156,8 +156,8 @@ int main(int argc, char* argv[]) {
         break;
 
       case CASCADE_STEP:
-        for (int i=0; i<info.GetCascs(); i++) {
-          if (info.CascH[i].GetMaxTm()<MinTime+MaxTime) { Steps.Add(info.CascH[i].GetMaxTm()); }
+        for (int i=0; i<infoPathModel.GetCascs(); i++) {
+          if (infoPathModel.CascH[i].GetMaxTm()<MinTime+MaxTime) { Steps.Add(infoPathModel.CascH[i].GetMaxTm()); }
         }
 
         Steps.Sort();
@@ -179,9 +179,9 @@ int main(int argc, char* argv[]) {
   TFOut FOutTimeSteps(TStr::Fmt("%s-time-steps.txt", OutFNm.CStr()));
   for (int i=0; i<Steps.Len(); i++) { FOutTimeSteps.PutStr(TStr::Fmt("%f\n", Steps[i].Val)); }
 
-  info.Init();
-  info.Infer(Steps);
-  info.SaveInferred(TStr::Fmt("%s.txt", OutFNm.CStr()));
+  infoPathModel.Init();
+  infoPathModel.Infer(Steps);
+  infoPathModel.SaveInferred(TStr::Fmt("%s.txt", OutFNm.CStr()));
   
   Catch
   printf("\nrun time: %s (%s)\n", ExeTm.GetTmStr(), TSecTm::GetCurTm().GetTmStr().CStr());

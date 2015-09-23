@@ -11,18 +11,18 @@ typedef struct {
    TFlt Mu;
    TInt latentVariableSize;   
    TFlt dampingFactor;
-}NodeSoftMixCascadesFunctionConfigure;
+}DecayCascadesFunctionConfigure;
 
-class NodeSoftMixCascadesFunction;
+class DecayCascadesFunction;
 
-class NodeSoftMixCascadesParameter {
-   friend class NodeSoftMixCascadesFunction;
+class DecayCascadesParameter {
+   friend class DecayCascadesFunction;
    public:
-      NodeSoftMixCascadesParameter& operator = (const NodeSoftMixCascadesParameter&);
-      NodeSoftMixCascadesParameter& operator += (const NodeSoftMixCascadesParameter&);
-      NodeSoftMixCascadesParameter& operator *= (const TFlt);
-      NodeSoftMixCascadesParameter& projectedlyUpdateGradient(const NodeSoftMixCascadesParameter&);
-      void set(NodeSoftMixCascadesFunctionConfigure configure);
+      DecayCascadesParameter& operator = (const DecayCascadesParameter&);
+      DecayCascadesParameter& operator += (const DecayCascadesParameter&);
+      DecayCascadesParameter& operator *= (const TFlt);
+      DecayCascadesParameter& projectedlyUpdateGradient(const DecayCascadesParameter&);
+      void set(DecayCascadesFunctionConfigure configure);
       void init(Data data, TInt NodeNm = 0);
       void initWeightParameter();
       void initAlphaParameter();
@@ -40,18 +40,17 @@ class NodeSoftMixCascadesParameter {
       THash<TInt, TFlt> nodeSampledTimes;
 };
 
-class NodeSoftMixCascadesFunction : public EMLikelihoodFunction<NodeSoftMixCascadesParameter> {
+class DecayCascadesFunction : public EMLikelihoodFunction<DecayCascadesParameter> {
    public:
       TFlt JointLikelihood(Datum datum, TInt latentVariable) const;
       void maximize() ;
-      NodeSoftMixCascadesParameter& gradient(Datum datum);
-      void calculateRMSProp(TFlt, NodeSoftMixCascadesParameter&, NodeSoftMixCascadesParameter&);
-      void set(NodeSoftMixCascadesFunctionConfigure configure);
+      DecayCascadesParameter& gradient(Datum datum);
+      void calculateRMSProp(TFlt, DecayCascadesParameter&, DecayCascadesParameter&);
+      void set(DecayCascadesFunctionConfigure configure);
       void init(Data data, TInt NodeNm = 0);
       void initWeightParameter() { parameter.initWeightParameter();}
       void initAlphaParameter() { parameter.initAlphaParameter();}
       void initPotentialEdges(Data);
-      void heuristicInitAlphaParameter(Data, int);
       TFlt GetTopicAlpha(TInt srcNId, TInt dstNId, TInt topic) const { return parameter.GetTopicAlpha(srcNId, dstNId, topic);}
       TFlt GetAlpha(TInt srcNId, TInt dstNId, TInt topic) const { return parameter.GetAlpha(srcNId, dstNId, topic);}
 
@@ -59,7 +58,6 @@ class NodeSoftMixCascadesFunction : public EMLikelihoodFunction<NodeSoftMixCasca
       THash<TIntPr,TFlt> potentialEdges;
       TFlt observedWindow;
       TFlt dampingFactor;
-      //NodeSoftMixCascadesParameter learningRate;
 };
 
 #endif

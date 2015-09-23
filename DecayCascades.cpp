@@ -1,5 +1,5 @@
 #include "stdafx.h"
-#include <SoftMixCascadesModel.h>
+#include <DecayCascadesModel.h>
 
 int main(int argc, char* argv[]) {
   Env = TEnv(argc, argv, TNotify::StdNotify);
@@ -35,6 +35,7 @@ int main(int argc, char* argv[]) {
 
   const TSampling TSam = (TSampling)Env.GetIfArgPrefixInt("-t:", 0, "Sampling method\n0:UNIF_SAMPLING, 1:WIN_SAMPLING, 2:EXP_SAMPLING, 3:WIN_EXP_SAMPLING, 4:RAY_SAMPLING");
   const int Iters  = Env.GetIfArgPrefixInt("-e:", 1000, "Number of iterations per time step");
+  const int EMIters  = Env.GetIfArgPrefixInt("-em:", 5, "Number of iterations of expectation maximization");
   const int BatchLen = Env.GetIfArgPrefixInt("-bl:", 1, "Number of cascades for each batch, -t:2 & -t:4 (default:1000)");
   const TStr ParamSampling = Env.GetIfArgPrefixStr("-sd:", "0.1", "Params for -t:1,2 & -t:4,5 (default:0.1)\n");
 
@@ -42,6 +43,7 @@ int main(int argc, char* argv[]) {
   const double Aging = Env.GetIfArgPrefixFlt("-a:", 1.0, "Aging factor for non-used edges (default:1.0)\n");
   const TRegularizer Regularizer = (TRegularizer)Env.GetIfArgPrefixInt("-r:", 0, "Regularizer\n0:no, 1:l2");
   const double Mu = Env.GetIfArgPrefixFlt("-mu:", 0.01, "Mu for regularizer (default:0.01)\n");
+  const double dampingFactor = Env.GetIfArgPrefixFlt("-df:", 3.0, "Damping factor (default:3.0)\n");
 
   const double Tol = Env.GetIfArgPrefixFlt("-tl:", 0.0005, "Tolerance (default:0.01)\n");
   const double MinAlpha = Env.GetIfArgPrefixFlt("-la:", 0.05, "Min alpha (default:0.05)\n");
@@ -53,41 +55,43 @@ int main(int argc, char* argv[]) {
   /*const int TakeAdditional = Env.GetIfArgPrefixInt("-s:", 1, "How much additional files to create?\n\
     0:no plots, 1:precision-recall plot, 2:accuracy plot, 3:mae plot, 4:mse plot, 5:all plots\n");*/
 
-  SoftMixCascadesModel softMixCascades;
+  DecayCascadesModel decayCascades;
   printf("\nLoading input cascades: %s\n", InFNm.CStr());
 
-  softMixCascades.SetModel(Model);
-  softMixCascades.SetDelta(Delta);
-  softMixCascades.SetSampling(TSam);
-  softMixCascades.SetMaxIterNm(Iters);
-  softMixCascades.SetBatchSize(BatchLen);
-  softMixCascades.SetLearningRate(lr);
-  softMixCascades.SetParamSampling(ParamSampling);
+  decayCascades.SetModel(Model);
+  decayCascades.SetDelta(Delta);
+  decayCascades.SetSampling(TSam);
+  decayCascades.SetMaxIterNm(Iters);
+  decayCascades.SetMaxEMIterNm(EMIters);
+  decayCascades.SetBatchSize(BatchLen);
+  decayCascades.SetLearningRate(lr);
+  decayCascades.SetParamSampling(ParamSampling);
 
-  softMixCascades.SetLatentVariableSize(latentVariableSize);
-  softMixCascades.SetTolerance(Tol);
-  softMixCascades.SetMaxAlpha(MaxAlpha);
-  softMixCascades.SetMinAlpha(MinAlpha);
-  softMixCascades.SetInitAlpha(InitAlpha);
-  softMixCascades.SetRegularizer(Regularizer);
-  softMixCascades.SetMu(Mu);
-  softMixCascades.SetWindow(Window);
-  softMixCascades.SetObservedWindow(observedWindow);
-  softMixCascades.SetAging(Aging);
+  decayCascades.SetLatentVariableSize(latentVariableSize);
+  decayCascades.SetTolerance(Tol);
+  decayCascades.SetMaxAlpha(MaxAlpha);
+  decayCascades.SetMinAlpha(MinAlpha);
+  decayCascades.SetInitAlpha(InitAlpha);
+  decayCascades.SetRegularizer(Regularizer);
+  decayCascades.SetMu(Mu);
+  decayCascades.SetWindow(Window);
+  decayCascades.SetObservedWindow(observedWindow);
+  decayCascades.SetAging(Aging);
+  decayCascades.SetDampingFactor(dampingFactor);
 
   // load cascades from file
-  softMixCascades.LoadCascadesTxt(InFNm);
+  decayCascades.LoadCascadesTxt(InFNm);
   
-  printf("cascades:%d\nRunning Stochastic Network Inference..\n", softMixCascades.GetCascs());
+  printf("cascades:%d\nRunning Stochastic Network Inference..\n", decayCascades.GetCascs());
 
   double MaxTime = TFlt::Mn;
   double MinTime = TFlt::Mx;
 
   if (MaxTimeStr.EqI("-1")) {
     // find maximum time across cascades
-    for (int i=0; i<softMixCascades.GetCascs(); i++) {
-      if (softMixCascades.CascH[i].GetMaxTm() > MaxTime) {
-        MaxTime = softMixCascades.CascH[i].GetMaxTm();
+    for (int i=0; i<decayCascades.GetCascs(); i++) {
+      if (decayCascades.CascH[i].GetMaxTm() > MaxTime) {
+        MaxTime = decayCascades.CascH[i].GetMaxTm();
       }
     }
   } else {
@@ -100,9 +104,9 @@ int main(int argc, char* argv[]) {
   if (MinTimeStr.EqI("-1")) {
     // find minimum time across cascades
     MinTime = TFlt::Mx;
-    for (int i=0; i<softMixCascades.GetCascs(); i++) {
-      if (softMixCascades.CascH[i].GetMinTm() < MinTime && softMixCascades.CascH[i].GetMinTm()!=0) {
-        MinTime = softMixCascades.CascH[i].GetMinTm();
+    for (int i=0; i<decayCascades.GetCascs(); i++) {
+      if (decayCascades.CascH[i].GetMinTm() < MinTime && decayCascades.CascH[i].GetMinTm()!=0) {
+        MinTime = decayCascades.CascH[i].GetMinTm();
       }
     }
   } else {
@@ -143,9 +147,9 @@ int main(int argc, char* argv[]) {
       case INFECTION_STEP:
         // copy infections
         if (verbose) { printf("Generating infections vector...\n"); }
-        for (int i=0; i<softMixCascades.GetCascs(); i++) {
-          for (int j=0; j<softMixCascades.CascH[i].Len() && softMixCascades.CascH[i].NIdHitH[j].Tm < MaxTime; j++) {
-            InfectionsV.Add(softMixCascades.CascH[i].NIdHitH[j].Tm);
+        for (int i=0; i<decayCascades.GetCascs(); i++) {
+          for (int j=0; j<decayCascades.CascH[i].Len() && decayCascades.CascH[i].NIdHitH[j].Tm < MaxTime; j++) {
+            InfectionsV.Add(decayCascades.CascH[i].NIdHitH[j].Tm);
           }
         }
 
@@ -165,8 +169,8 @@ int main(int argc, char* argv[]) {
         break;
 
       case CASCADE_STEP:
-        for (int i=0; i<softMixCascades.GetCascs(); i++) {
-          if (softMixCascades.CascH[i].GetMaxTm()<MinTime+MaxTime) { Steps.Add(softMixCascades.CascH[i].GetMaxTm()); }
+        for (int i=0; i<decayCascades.GetCascs(); i++) {
+          if (decayCascades.CascH[i].GetMaxTm()<MinTime+MaxTime) { Steps.Add(decayCascades.CascH[i].GetMaxTm()); }
         }
 
         Steps.Sort();
@@ -188,10 +192,10 @@ int main(int argc, char* argv[]) {
   TFOut FOutTimeSteps(TStr::Fmt("%s-time-steps.txt", OutFNm.CStr()));
   for (int i=0; i<Steps.Len(); i++) { FOutTimeSteps.PutStr(TStr::Fmt("%f\n", Steps[i].Val)); }
 
-  softMixCascades.Init();
-  softMixCascades.Infer(Steps, OutFNm);
-  softMixCascades.SaveInferred(TStr::Fmt("%s.txt", OutFNm.CStr()));
-  softMixCascades.SaveWeights(TStr::Fmt("%s_Weights.txt", OutFNm.CStr()));
+  decayCascades.Init();
+  decayCascades.Infer(Steps, OutFNm);
+  decayCascades.SaveInferred(TStr::Fmt("%s.txt", OutFNm.CStr()));
+  decayCascades.SaveWeights(TStr::Fmt("%s_Weights.txt", OutFNm.CStr()));
   
   Catch
   printf("\nrun time: %s (%s)\n", ExeTm.GetTmStr(), TSecTm::GetCurTm().GetTmStr().CStr());

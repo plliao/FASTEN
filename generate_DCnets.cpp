@@ -1,5 +1,5 @@
 #include "stdafx.h"
-#include <NodeSoftMixCascadesModel.h>
+#include <DecayCascadesModel.h>
 #include <InfoPathFileIO.h>
 
 int main(int argc, char* argv[]) {
@@ -41,36 +41,36 @@ int main(int argc, char* argv[]) {
   // output filename
   const TStr FileName = Env.GetIfArgPrefixStr("-f:", TStr("example"), "Output name for network & cascades (default:example)\n");
 
-  NodeSoftMixCascadesModel nodeSoftMixCascades;
+  DecayCascadesModel decayCascades;
 
-  nodeSoftMixCascades.SetTotalTime(TotalTime);
-  nodeSoftMixCascades.SetWindow(Window);
-  nodeSoftMixCascades.SetModel(Model);
-  nodeSoftMixCascades.SetDelta(Delta);
-  nodeSoftMixCascades.SetK(k);
-  nodeSoftMixCascades.SetDampingFactor(dampingFactor);
+  decayCascades.SetTotalTime(TotalTime);
+  decayCascades.SetWindow(Window);
+  decayCascades.SetModel(Model);
+  decayCascades.SetDelta(Delta);
+  decayCascades.SetK(k);
+  decayCascades.SetDampingFactor(dampingFactor);
 	
   TStrV RAlphasV; RAlphas.SplitOnAllCh(';', RAlphasV);
   TFlt MaxAlpha = RAlphasV[1].GetFlt(); 
   TFlt MinAlpha = RAlphasV[0].GetFlt();
 
-  nodeSoftMixCascades.SetLatentVariableSize(latentVariableSize);
-  nodeSoftMixCascades.SetMaxAlpha(MaxAlpha);
-  nodeSoftMixCascades.SetMinAlpha(MinAlpha);
+  decayCascades.SetLatentVariableSize(latentVariableSize);
+  decayCascades.SetMaxAlpha(MaxAlpha);
+  decayCascades.SetMinAlpha(MinAlpha);
 
   // Generate network
   if (TNetwork<2) {
-	  nodeSoftMixCascades.GenerateGroundTruth(TNetwork, NNodes, NEdges, NetworkParams); // Generate network
+	  decayCascades.GenerateGroundTruth(TNetwork, NNodes, NEdges, NetworkParams); // Generate network
   } else {
 	  TFIn GFIn(GroundTruthFileName);     // open network file
-          InfoPathFileIO::LoadNetworkTxt(GFIn, nodeSoftMixCascades.Network, nodeSoftMixCascades.nodeInfo);
+          InfoPathFileIO::LoadNetworkTxt(GFIn, decayCascades.Network, decayCascades.nodeInfo);
   }
 
   // Generate Cascades
   for (int i = 0; i < NCascades; i++) {
-	  TCascade C(nodeSoftMixCascades.CascH.Len(), nodeSoftMixCascades.nodeInfo.Model);
-	  nodeSoftMixCascades.GenCascade(C);
-          nodeSoftMixCascades.CascH.AddDat(C.CId) = C;
+	  TCascade C(decayCascades.CascH.Len(), decayCascades.nodeInfo.Model);
+	  decayCascades.GenCascade(C);
+          decayCascades.CascH.AddDat(C.CId) = C;
 
 	  printf("cascade:%d (%d nodes, first infection:%f, last infection:%f)\n", i, C.Len(), C.GetMinTm(), C.GetMaxTm());
 
@@ -78,13 +78,13 @@ int main(int argc, char* argv[]) {
 	  IAssert( (C.GetMaxTm() - C.GetMinTm()) <= Window );
   }
 
-  printf("Generate %d cascades!\n", nodeSoftMixCascades.GetCascs());
+  printf("Generate %d cascades!\n", decayCascades.GetCascs());
 
-  if (TNetwork<2) nodeSoftMixCascades.SaveGroundTruth(FileName);
-  InfoPathFileIO::SaveNetwork(TStr::Fmt("%s-network.txt", FileName.CStr()), nodeSoftMixCascades.Network, nodeSoftMixCascades.nodeInfo, nodeSoftMixCascades.edgeInfo);
+  if (TNetwork<2) decayCascades.SaveGroundTruth(FileName);
+  InfoPathFileIO::SaveNetwork(TStr::Fmt("%s-network.txt", FileName.CStr()), decayCascades.Network, decayCascades.nodeInfo, decayCascades.edgeInfo);
   // Save Cascades
-  InfoPathFileIO::SaveCascades(TStr::Fmt("%s-cascades.txt", FileName.CStr()), nodeSoftMixCascades.CascH, nodeSoftMixCascades.nodeInfo);
-  nodeSoftMixCascades.SaveWeights(TStr::Fmt("%s_Weights.txt",FileName.CStr()));
+  InfoPathFileIO::SaveCascades(TStr::Fmt("%s-cascades.txt", FileName.CStr()), decayCascades.CascH, decayCascades.nodeInfo);
+  decayCascades.SaveWeights(TStr::Fmt("%s_Weights.txt",FileName.CStr()));
 
   Catch
   printf("\nrun time: %s (%s)\n", ExeTm.GetTmStr(), TSecTm::GetCurTm().GetTmStr().CStr());

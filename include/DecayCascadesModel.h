@@ -4,10 +4,10 @@
 #include <cascdynetinf.h>
 #include <InfoPathFileIO.h>
 #include <EM.h>
-#include <NodeSoftMixCascadesFunction.h>
+#include <DecayCascadesFunction.h>
 #include <TimeShapingFunction.h>
 
-class NodeSoftMixCascadesModel {
+class DecayCascadesModel {
    public:
       NodeInfo nodeInfo;
       EdgeInfo edgeInfo;
@@ -19,13 +19,12 @@ class NodeSoftMixCascadesModel {
       TFlt Window, TotalTime; 
       TFlt Delta, K;
       TFlt Gamma, Aging;
-      TInt useHeuristic;
 
-      NodeSoftMixCascadesFunctionConfigure nodeSoftMixCascadesFunctionConfigure;
-      NodeSoftMixCascadesFunction lossFunction;
+      DecayCascadesFunctionConfigure decayCascadesFunctionConfigure;
+      DecayCascadesFunction lossFunction;
 
       EMConfigure eMConfigure;
-      EM<NodeSoftMixCascadesParameter> em;
+      EM<DecayCascadesParameter> em;
 
       void LoadCascadesTxt(const TStr& InFNm);
       void LoadGroundTruthTxt(const TStr& InFNm);
@@ -38,14 +37,13 @@ class NodeSoftMixCascadesModel {
       void GenerateGroundTruth(const int& TNetwork, const int& NNodes, const int& NEdges, const TStr& NetworkParams);
       void SaveGroundTruth(TStr);
 
-      void SetLatentVariableSize(const TInt size) { nodeSoftMixCascadesFunctionConfigure.latentVariableSize = eMConfigure.latentVariableSize = size;}
+      void SetLatentVariableSize(const TInt size) { decayCascadesFunctionConfigure.latentVariableSize = eMConfigure.latentVariableSize = size;}
       void SetTotalTime(const float& tt) { TotalTime = tt; }
       void SetModel(const TModel& model) { nodeInfo.Model = model; }
       void SetWindow(const double& window) { Window = window; }
       void SetObservedWindow(const double& window) { lossFunction.observedWindow = window; }
       void SetDelta(const double& delta) { Delta = delta; }
       void SetK(const double& k) { K = k; }
-      void SetHeuristic(const int& u) { useHeuristic = u;}
 
       void SetLearningRate(const double& lr) { eMConfigure.pGDConfigure.learningRate = lr; }
       void SetBatchSize(const size_t batchSize) { eMConfigure.pGDConfigure.batchSize = batchSize;}
@@ -55,13 +53,13 @@ class NodeSoftMixCascadesModel {
       void SetMaxEMIterNm(const size_t maxIterNm) { eMConfigure.maxIterNm = maxIterNm;}
 
       void SetAging(const double& aging) { Aging = aging; }
-      void SetRegularizer(const TRegularizer& reg) { nodeSoftMixCascadesFunctionConfigure.Regularizer = reg; }
-      void SetMu(const double& mu) { nodeSoftMixCascadesFunctionConfigure.Mu = mu; }
-      void SetDampingFactor(const double& df) { nodeSoftMixCascadesFunctionConfigure.dampingFactor = df; }
-      void SetTolerance(const double& tol) { nodeSoftMixCascadesFunctionConfigure.Tol = tol; }
-      void SetMaxAlpha(const double& ma) { nodeSoftMixCascadesFunctionConfigure.MaxAlpha = edgeInfo.MaxAlpha = ma; }
-      void SetMinAlpha(const double& ma) { nodeSoftMixCascadesFunctionConfigure.MinAlpha = edgeInfo.MinAlpha = ma; }
-      void SetInitAlpha(const double& ia) { nodeSoftMixCascadesFunctionConfigure.InitAlpha = ia; }
+      void SetRegularizer(const TRegularizer& reg) { decayCascadesFunctionConfigure.Regularizer = reg; }
+      void SetMu(const double& mu) { decayCascadesFunctionConfigure.Mu = mu; }
+      void SetDampingFactor(const double& df) { decayCascadesFunctionConfigure.dampingFactor = df; }
+      void SetTolerance(const double& tol) { decayCascadesFunctionConfigure.Tol = tol; }
+      void SetMaxAlpha(const double& ma) { decayCascadesFunctionConfigure.MaxAlpha = edgeInfo.MaxAlpha = ma; }
+      void SetMinAlpha(const double& ma) { decayCascadesFunctionConfigure.MinAlpha = edgeInfo.MinAlpha = ma; }
+      void SetInitAlpha(const double& ia) { decayCascadesFunctionConfigure.InitAlpha = ia; }
 
       void Init();
       int GetCascs() { return CascH.Len(); }

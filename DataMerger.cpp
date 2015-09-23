@@ -19,8 +19,6 @@ int main(int argc, char* argv[]) {
 
   TStrFltFltHNEDNet GroundTruth;
   THash<TInt, TCascade> CascH;
-  //THash<TInt, TNodeInfo> NodeNmH;
-  //TStrIntH DomainsIdH;
   NodeInfo nodeInfo;
   nodeInfo.Model = Model;
   EdgeInfo edgeInfo = {MaxAlpha, MinAlpha};

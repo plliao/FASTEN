@@ -1,23 +1,23 @@
-#include <NodeSoftMixCascadesModel.h>
+#include <DecayCascadesModel.h>
 #include <kronecker.h>
 #include <InfoPathFileIO.h>
 #include <cmath>
 
-void NodeSoftMixCascadesModel::LoadCascadesTxt(const TStr& InFNm) {
+void DecayCascadesModel::LoadCascadesTxt(const TStr& InFNm) {
    TFIn FIn(InFNm);
    InfoPathFileIO::LoadCascadesTxt(FIn, CascH, nodeInfo);
 }
 
-void NodeSoftMixCascadesModel::LoadGroundTruthTxt(const TStr& InFNm) {
+void DecayCascadesModel::LoadGroundTruthTxt(const TStr& InFNm) {
    TFIn FIn(InFNm);
    InfoPathFileIO::LoadNetworkTxt(FIn, Network, nodeInfo);
 }
 
-void NodeSoftMixCascadesModel::SaveInferred(const TStr& OutFNm) {
+void DecayCascadesModel::SaveInferred(const TStr& OutFNm) {
    InfoPathFileIO::SaveNetwork(OutFNm, InferredNetwork, nodeInfo, edgeInfo);
 }
 
-void NodeSoftMixCascadesModel::SaveWeights(const TStr& OutFNm) {
+void DecayCascadesModel::SaveWeights(const TStr& OutFNm) {
    TFOut FOut(OutFNm);
    THash<TInt, THash<TInt,TFlt> >& nodeWeights = lossFunction.parameter.nodeWeights;
    for (THash<TInt, THash<TInt,TFlt> >::TIter WI = nodeWeights.BegI(); !WI.IsEnd(); WI++) {
@@ -33,7 +33,7 @@ void NodeSoftMixCascadesModel::SaveWeights(const TStr& OutFNm) {
    }
 }
 
-void NodeSoftMixCascadesModel::ReadAlphas(const TStr& InFNm) {
+void DecayCascadesModel::ReadAlphas(const TStr& InFNm) {
   for ( THash<TInt, THash<TIntPr,TFlt> >::TIter AI = lossFunction.parameter.kAlphas.BegI(); !AI.IsEnd(); AI++) {
      TInt key = AI.GetKey() + 1;
      TStr FNm = InFNm + "-" + key.GetStr() + "-network.txt";
@@ -51,10 +51,10 @@ void NodeSoftMixCascadesModel::ReadAlphas(const TStr& InFNm) {
   }
 }
 
-void NodeSoftMixCascadesModel::ReadWeights(const TStr& InFNm) {
+void DecayCascadesModel::ReadWeights(const TStr& InFNm) {
   TFIn FIn(InFNm);
   TStr line; 
-  NodeSoftMixCascadesParameter& parameter = lossFunction.parameter;
+  DecayCascadesParameter& parameter = lossFunction.parameter;
   while (!FIn.Eof()) {
      FIn.GetNextLn(line);
      TStrV tokens, weightStrV;
@@ -69,7 +69,7 @@ void NodeSoftMixCascadesModel::ReadWeights(const TStr& InFNm) {
   }
 }
 
-void NodeSoftMixCascadesModel::GenCascade(TCascade& C) {
+void DecayCascadesModel::GenCascade(TCascade& C) {
 	bool verbose = false;
 	TIntFltH InfectedNIdH; TIntH InfectedBy;
 	double GlobalTime, InitTime;
@@ -90,8 +90,6 @@ void NodeSoftMixCascadesModel::GenCascade(TCascade& C) {
 		InitTime = TFlt::Rnd.GetUniDev() * TotalTime; // random starting point <TotalTime
 		GlobalTime = InitTime;
 
-                //THash<TInt,TFlt>& weight = lossFunction.parameter.nodeWeights.GetDat(StartNId);
-                //MMRate type
                 THash<TInt,TFlt>& weight = lossFunction.parameter.nodeWeights.GetDat(0);
                 TInt topic = -1;
                 TFlt sampledValue = TFlt::Rnd.GetUniDev();
@@ -138,7 +136,7 @@ void NodeSoftMixCascadesModel::GenCascade(TCascade& C) {
 				else alpha = (double)lossFunction.GetAlpha(NId, DstNId, topic);
 				if (verbose) { printf("GlobalTime:%f, nodes:%d->%d, alpha:%f\n", GlobalTime, NId, DstNId, alpha); }
 
-                                alpha /= TMath::Power(nodeSoftMixCascadesFunctionConfigure.dampingFactor, nodePosition);
+                                alpha /= TMath::Power(decayCascadesFunctionConfigure.dampingFactor, nodePosition);
 				if (alpha <= edgeInfo.MinAlpha) { continue; }
 
 				// not infecting the parent
@@ -197,10 +195,10 @@ void NodeSoftMixCascadesModel::GenCascade(TCascade& C) {
 
 }
 
-void NodeSoftMixCascadesModel::GenerateGroundTruth(const int& TNetwork, const int& NNodes, const int& NEdges, const TStr& NetworkParams) {
+void DecayCascadesModel::GenerateGroundTruth(const int& TNetwork, const int& NNodes, const int& NEdges, const TStr& NetworkParams) {
    TIntFltH positionHash;
    Data data = {nodeInfo.NodeNmH, CascH, positionHash, 0};
-   lossFunction.set(nodeSoftMixCascadesFunctionConfigure);
+   lossFunction.set(decayCascadesFunctionConfigure);
    lossFunction.init(data, NNodes);
 
    for (TInt i=0; i < eMConfigure.latentVariableSize; i++) {
@@ -275,10 +273,10 @@ void NodeSoftMixCascadesModel::GenerateGroundTruth(const int& TNetwork, const in
    }
 }
 
-void NodeSoftMixCascadesModel::SaveGroundTruth(TStr fileNm) {
+void DecayCascadesModel::SaveGroundTruth(TStr fileNm) {
    printf("ground truth\n");
 
-   for (TInt latentVariable=0; latentVariable < nodeSoftMixCascadesFunctionConfigure.latentVariableSize; latentVariable++) {
+   for (TInt latentVariable=0; latentVariable < decayCascadesFunctionConfigure.latentVariableSize; latentVariable++) {
       TFOut FOut(fileNm + TStr::Fmt("-%d-network.txt", latentVariable+1));
       for (THash<TInt, TNodeInfo>::TIter NI = nodeInfo.NodeNmH.BegI(); NI < nodeInfo.NodeNmH.EndI(); NI++) {
          FOut.PutStr(TStr::Fmt("%d,%s\n", NI.GetKey().Val, NI.GetDat().Name.CStr()));
@@ -292,7 +290,7 @@ void NodeSoftMixCascadesModel::SaveGroundTruth(TStr fileNm) {
 
       TFlt maxValue = -DBL_MAX;
       printf("%d,%d , \n", srcNId(), dstNId());
-      for (TInt latentVariable=0; latentVariable < nodeSoftMixCascadesFunctionConfigure.latentVariableSize; latentVariable++) {
+      for (TInt latentVariable=0; latentVariable < decayCascadesFunctionConfigure.latentVariableSize; latentVariable++) {
          THash<TIntPr, TFlt>& alphas = lossFunction.parameter.kAlphas.GetDat(latentVariable); 
 
          TFlt alpha = 0.0;
@@ -310,26 +308,26 @@ void NodeSoftMixCascadesModel::SaveGroundTruth(TStr fileNm) {
    }
 }
 
-void NodeSoftMixCascadesModel::Init() {
+void DecayCascadesModel::Init() {
    for (THash<TInt, TNodeInfo>::TIter NI = nodeInfo.NodeNmH.BegI(); NI < nodeInfo.NodeNmH.EndI(); NI++) {
       InferredNetwork.AddNode(NI.GetKey(), NI.GetDat().Name);
       MaxNetwork.AddNode(NI.GetKey(), NI.GetDat().Name);
    }
 }
 
-void NodeSoftMixCascadesModel::Infer(const TFltV& Steps, const TStr& OutFNm) {
+void DecayCascadesModel::Infer(const TFltV& Steps, const TStr& OutFNm) {
   
    switch (nodeInfo.Model) {
       case POW :
-         nodeSoftMixCascadesFunctionConfigure.shapingFunction = new POWShapingFunction(Delta);
+         decayCascadesFunctionConfigure.shapingFunction = new POWShapingFunction(Delta);
          break;
       case RAY :
-         nodeSoftMixCascadesFunctionConfigure.shapingFunction = new RAYShapingFunction();
+         decayCascadesFunctionConfigure.shapingFunction = new RAYShapingFunction();
          break;
       default :
-         nodeSoftMixCascadesFunctionConfigure.shapingFunction = new EXPShapingFunction(); 
+         decayCascadesFunctionConfigure.shapingFunction = new EXPShapingFunction(); 
    } 
-   lossFunction.set(nodeSoftMixCascadesFunctionConfigure);
+   lossFunction.set(decayCascadesFunctionConfigure);
    em.set(eMConfigure);
    TIntFltH CascadesPositions;
    Data data = {nodeInfo.NodeNmH, CascH, CascadesPositions, 0.0};
@@ -338,15 +336,9 @@ void NodeSoftMixCascadesModel::Infer(const TFltV& Steps, const TStr& OutFNm) {
    TStr expName, resultDir, outName, modelName;
    OutFNm.SplitOnCh(resultDir, '/', outName);
    outName.SplitOnCh(expName, '-', modelName);
-   //ReadWeights("data/" + expName + "_Weights.txt");
-   //ReadAlphas("data/" + expName);
    lossFunction.initWeightParameter();
-   if (useHeuristic==0) lossFunction.heuristicInitAlphaParameter(data, 10);
    lossFunction.InitLatentVariable(data, eMConfigure);
   
-   printf("Node Soft Mix Cascades initialization done\n");
-   fflush(stdout);
- 
    TSampling Sampling = eMConfigure.pGDConfigure.sampling;
    TStrV ParamSamplingV; eMConfigure.pGDConfigure.ParamSampling.SplitOnAllCh(';', ParamSamplingV);
 
@@ -367,15 +359,6 @@ void NodeSoftMixCascadesModel::Infer(const TFltV& Steps, const TStr& OutFNm) {
       const THash<TInt, THash<TIntPr, TFlt> >& kAlphas = lossFunction.getParameter().kAlphas;
 
       THash<TInt, TFlt> kPi;
-      /*for (TInt topic = 0; topic < eMConfigure.latentVariableSize; topic ++) kPi.AddDat(topic, 0.0);
-      for (TIntFltH::TIter PI = CascadesPositions.BegI(); !PI.IsEnd(); PI++) {
-         TInt NId = CascH[PI.GetKey()].BegI().GetKey();
-         for (THash<TInt, TFlt>::TIter VI = kPi.BegI(); !VI.IsEnd(); VI++) {
-            VI.GetDat() += lossFunction.parameter.nodeWeights.GetDat(NId).GetDat(VI.GetKey());
-         }
-      } 
-      for (TInt topic = 0; topic < eMConfigure.latentVariableSize; topic ++) kPi.GetDat(topic) /= double(CascadesPositions.Len());*/
-      //MMRate type
       for (TInt topic = 0; topic < eMConfigure.latentVariableSize; topic ++) kPi.AddDat(topic, lossFunction.parameter.nodeWeights.GetDat(0).GetDat(topic));
 
       for (THash<TInt, THash<TIntPr, TFlt> >::TIter NI = kAlphas.BegI(); !NI.IsEnd(); NI++) {
@@ -400,7 +383,7 @@ void NodeSoftMixCascadesModel::Infer(const TFltV& Steps, const TStr& OutFNm) {
                 alpha == inferredNetwork.GetEDat(srcNId, dstNId).GetDat(Steps[t-1]))
                alpha = alpha * Aging;
             
-            if (alpha <= nodeSoftMixCascadesFunctionConfigure.MinAlpha) continue;
+            if (alpha <= decayCascadesFunctionConfigure.MinAlpha) continue;
             if (!inferredNetwork.IsEdge(srcNId, dstNId)) inferredNetwork.AddEdge(srcNId, dstNId, TFltFltH());
             if (!MaxNetwork.IsEdge(srcNId, dstNId)) MaxNetwork.AddEdge(srcNId, dstNId, TFltFltH());
  
@@ -415,5 +398,5 @@ void NodeSoftMixCascadesModel::Infer(const TFltV& Steps, const TStr& OutFNm) {
       }   
    }
    InfoPathFileIO::SaveNetwork(OutFNm + "_Max.txt", MaxNetwork, nodeInfo, edgeInfo);
-   delete nodeSoftMixCascadesFunctionConfigure.shapingFunction;
+   delete decayCascadesFunctionConfigure.shapingFunction;
 }

@@ -1,14 +1,12 @@
-#include <NodeSoftMixCascadesFunction.h>
+#include <DecayCascadesFunction.h>
 
-TFlt NodeSoftMixCascadesFunction::JointLikelihood(Datum datum, TInt latentVariable) const {
+TFlt DecayCascadesFunction::JointLikelihood(Datum datum, TInt latentVariable) const {
    double CurrentTime = datum.time;
    TCascade &Cascade = datum.cascH.GetDat(datum.index);
    THash<TInt, TNodeInfo> &NodeNmH = datum.NodeNmH;
    double totalLoss = 0.0;
 
-   //MMRate type
    TInt startNId = 0;
-   //TInt startNId = Cascade.BegI().GetKey();
 
    int nodeSize = NodeNmH.Len();
    #pragma omp parallel for reduction(+:totalLoss)
@@ -49,14 +47,12 @@ TFlt NodeSoftMixCascadesFunction::JointLikelihood(Datum datum, TInt latentVariab
    return logPi - totalLoss;
 }
 
-NodeSoftMixCascadesParameter& NodeSoftMixCascadesFunction::gradient(Datum datum) {
+DecayCascadesParameter& DecayCascadesFunction::gradient(Datum datum) {
    double CurrentTime = datum.time;
    TCascade &Cascade = datum.cascH.GetDat(datum.index);
    THash<TInt, TNodeInfo> &NodeNmH = datum.NodeNmH;
  
    parameterGrad.reset();
-   //TInt startNId = Cascade.BegI().GetKey();
-   //MMRate type
    TInt startNId = 0;
    if (!parameterGrad.nodeWeights.IsKey(startNId)) {
       parameterGrad.nodeWeights.AddDat(startNId, THash<TInt,TFlt>());
@@ -155,23 +151,14 @@ static void updateRMSProp(TFlt alpha, THash<TIntPr,TFlt>& lr, THash<TIntPr,TFlt>
    }
 }
 
-/*static void updateRMSProp(TFlt alpha, THash<TInt,TFlt>& lr, THash<TInt,TFlt>& gradient) {
-   for(THash<TInt,TFlt>::TIter GI = gradient.BegI(); !GI.IsEnd(); GI++) {
-      TInt key = GI.GetKey();
-      if (!lr.IsKey(key)) lr.AddDat(key, TMath::Sqrt(GI.GetDat() * GI.GetDat()));
-      else lr.GetDat(key) = TMath::Sqrt(alpha * lr.GetDat(key) * lr.GetDat(key) + (1.0 - alpha) * GI.GetDat() * GI.GetDat());
-      GI.GetDat() /= lr.GetDat(key);
-   }
-}*/
-
-void NodeSoftMixCascadesFunction::calculateRMSProp(TFlt alpha, NodeSoftMixCascadesParameter& lr, NodeSoftMixCascadesParameter& gradient) {
+void DecayCascadesFunction::calculateRMSProp(TFlt alpha, DecayCascadesParameter& lr, DecayCascadesParameter& gradient) {
   for (THash<TInt, THash<TIntPr,TFlt> >::TIter AI = gradient.kAlphas.BegI(); !AI.IsEnd(); AI++) {
      if (!lr.kAlphas.IsKey(AI.GetKey())) lr.kAlphas.AddDat(AI.GetKey(), THash<TIntPr,TFlt>());
      updateRMSProp(alpha, lr.kAlphas.GetDat(AI.GetKey()), AI.GetDat());
   }
 }
 
-void NodeSoftMixCascadesFunction::maximize() {
+void DecayCascadesFunction::maximize() {
    for (THash<TInt,THash<TInt,TFlt> >::TIter WI = parameterGrad.nodeWeights.BegI(); !WI.IsEnd(); WI++) {
       THash<TInt,TFlt>& weight = parameter.nodeWeights.GetDat(WI.GetKey());
       TFlt& times = parameterGrad.nodeSampledTimes.GetDat(WI.GetKey());
@@ -187,10 +174,9 @@ void NodeSoftMixCascadesFunction::maximize() {
       //printf("\n");
       times = 0.0;
    }
-   //learningRate.kAlphas.Clr();
 }
 
-void NodeSoftMixCascadesFunction::set(NodeSoftMixCascadesFunctionConfigure configure) {
+void DecayCascadesFunction::set(DecayCascadesFunctionConfigure configure) {
    latentVariableSize = configure.latentVariableSize;
    shapingFunction = configure.shapingFunction;
    dampingFactor = configure.dampingFactor;
@@ -198,12 +184,11 @@ void NodeSoftMixCascadesFunction::set(NodeSoftMixCascadesFunctionConfigure confi
    parameterGrad.set(configure);
 }
 
-void NodeSoftMixCascadesFunction::init(Data data, TInt NodeNm) {
+void DecayCascadesFunction::init(Data data, TInt NodeNm) {
    parameter.init(data, NodeNm);
-   //parameterGrad.init(data);
 }
 
-void NodeSoftMixCascadesParameter::set(NodeSoftMixCascadesFunctionConfigure configure) {
+void DecayCascadesParameter::set(DecayCascadesFunctionConfigure configure) {
    Regularizer = configure.Regularizer;
    Mu = configure.Mu;
    Tol = configure.Tol;
@@ -213,7 +198,7 @@ void NodeSoftMixCascadesParameter::set(NodeSoftMixCascadesFunctionConfigure conf
    latentVariableSize = configure.latentVariableSize;
 }
 
-void NodeSoftMixCascadesParameter::init(Data data, TInt NodeNm) {
+void DecayCascadesParameter::init(Data data, TInt NodeNm) {
    for (TInt i=0; i < latentVariableSize; i++) {
       kAlphas.AddDat(i, THash<TIntPr, TFlt>());
    }
@@ -230,7 +215,7 @@ void NodeSoftMixCascadesParameter::init(Data data, TInt NodeNm) {
    }
 }
 
-void NodeSoftMixCascadesParameter::initWeightParameter() {
+void DecayCascadesParameter::initWeightParameter() {
    TFlt::Rnd.PutSeed(0);
    for (THash<TInt, THash<TInt, TFlt> >::TIter WI = nodeWeights.BegI(); !WI.IsEnd(); WI++) {
       THash<TInt, TFlt>& weight = WI.GetDat();
@@ -243,7 +228,7 @@ void NodeSoftMixCascadesParameter::initWeightParameter() {
    }
 }
 
-void NodeSoftMixCascadesParameter::initAlphaParameter() {
+void DecayCascadesParameter::initAlphaParameter() {
    for (TInt i=0; i < latentVariableSize; i++) {
       THash<TIntPr, TFlt>& alphas = kAlphas.GetDat(i);
       for (THash<TIntPr, TFlt>::TIter AI = alphas.BegI(); !AI.IsEnd(); AI++) {
@@ -252,147 +237,7 @@ void NodeSoftMixCascadesParameter::initAlphaParameter() {
    }
 }
 
-void NodeSoftMixCascadesFunction::heuristicInitAlphaParameter(Data data, int times) {
-   TInt::Rnd.PutSeed(0);
-   THash<TIntPr, TInt> edgeType;
-   THash<TIntPr, TFlt> edgeTimes, edgeDiffTime;
-   THash<TIntPr, TVec<TCascade*> > edgeMap;
-   THash<TIntPr, TVec<TFlt> > edgeSamples;
-   THash<TInt, TCascade>& cascH = data.cascH;
-   for (THash<TInt, TCascade>::TIter CI = cascH.BegI(); !CI.IsEnd(); CI++) {
-      THash< TInt, THitInfo >::TIter srcI = CI.GetDat().BegI();
-      
-      TInt srcNId = srcI.GetDat().NId, dstNId;
-      TFlt srcTm = srcI.GetDat().Tm, dstTm;
-
-      srcI++;
-      dstNId = srcI.GetDat().NId;
-      dstTm = srcI.GetDat().Tm;
-
-      TIntPr index(srcNId,dstNId);
-      if (!edgeTimes.IsKey(index)) edgeTimes.AddDat(index, 1.0);
-      else edgeTimes.GetDat(index)++;
-      if (!edgeDiffTime.IsKey(index)) edgeDiffTime.AddDat(index, dstTm - srcTm);
-      else edgeDiffTime.GetDat(index) += dstTm - srcTm;
-      if (!edgeMap.IsKey(index)) edgeMap.AddDat(index, TVec<TCascade*>());
-      edgeMap.GetDat(index).Add(&CI.GetDat());
-      if (!edgeSamples.IsKey(index)) edgeSamples.AddDat(index, TVec<TFlt>());
-      edgeSamples.GetDat(index).Add(dstTm - srcTm);
-   } 
-
-   for (THash<TIntPr, TFlt>::TIter TI = edgeDiffTime.BegI(); !TI.IsEnd(); TI++) {
-      TI.GetDat() /= edgeTimes.GetDat(TI.GetKey());
-      edgeSamples.GetDat(TI.GetKey()).Sort();
-   }
-
-   edgeTimes.SortByDat(false);
-   TInt type = 0;
-   while (type < latentVariableSize) {
-      bool findNewType = false;
-      for (int i=0; i<edgeTimes.Len(); i++) {
-         TIntPr index = edgeTimes.GetKey(i);
-         if (edgeType.IsKey(index)) continue;
-         if (edgeTimes.GetDat(index) < 10.0) break;
-         
-         bool addInBestEdges = true;
-         TInt srcNId = index.Val1, dstNId = index.Val2;
-         TIntPrV possibleSameTypeEdges;
-         THash<TIntPr, TFlt> possibleSameTypeDiff, possibleSameTypeDiffThreshold;
-         THash<TIntPr, TInt> possibleSameTypeSupport;
-         TVec<TCascade*> cascades = edgeMap.GetDat(index);
-
-         //printf("%d -> %d:\n", srcNId(), dstNId());
-         for (int j=0; j<edgeTimes.Len(); j++) {
-            if (j==i) continue;
-            TIntPr checkIndex = edgeTimes.GetKey(j);
-            TInt src = checkIndex.Val1, dst = checkIndex.Val2;
-            TFltV sample1 = edgeSamples.GetDat(checkIndex), sample2;
-            for (TVec<TCascade*>::TIter CI = cascades.BegI(); CI < cascades.EndI(); CI++) {
-               TCascade& cascade = **CI;
-               if (cascade.IsNode(src) and cascade.IsNode(dst) and shapingFunction->Before(cascade.GetTm(src), cascade.GetTm(dst))) {
-                  sample2.Add(cascade.GetTm(dst)-cascade.GetTm(src));
-               }
-            }
-            sample2.Sort();
-
-
-            TInt n1 = sample1.Len(), n2 = sample2.Len();
-            TInt i1 = 0, i2 = 0;
-            TFlt diff = -DBL_MAX;
-            if (n2 <= 0.8 * (double)cascades.Len() or n1 < 10) continue;
-
-            //printf("\t%d -> %d: ", src(), dst());
-            while (i1 < n1 and i2 < n2) {
-               TFlt min1, min2;
-               TFlt x1 = sample1[i1], x2 = sample2[i2];
-               if (x1 < x2) {
-                  min1 = x1;
-                  i1++;
-               }
-               else {
-                  min2 = x2;
-                  i2++;
-               }
-               
-               if (i1==n1) min2 = x2;
-               else if (i2==n2) min2 = x1;
-               else {
-                  x1 = sample1[i1];
-                  x2 = sample2[i2];
-                  min2 = (x1 < x2) ? x1 : x2;
-               }
-
-               TFlt threshold = (min1 + min2) / 2.0;
-               while (i1 < n1 and sample1[i1] < threshold) i1++;
-               while (i2 < n2 and sample2[i2] < threshold) i2++;
-               TFlt F1 = (double)i1/ (double)n1, F2 = (double)i2/ (double)n2;
-               if (TFlt::Abs(F1-F2) > diff) {
-                  diff = TFlt::Abs(F1-F2);
-                  //printf("%f, ", diff());
-               }
-            }
-            //printf("\n");
-
-            TFlt diffThreshold = 1.22 * TMath::Sqrt((double)(n1+n2)/(double)(n1*n2));
-
-            //printf("\t\t n2 = %d, n = %d, diffThreshold = %f\n", n2(), cascades.Len(), diffThreshold());
-            if (n2 > 0.8 * (double)cascades.Len() and diff < diffThreshold) {
-               if (edgeType.IsKey(checkIndex)) {
-                  addInBestEdges = false;
-                  break;
-               }
-               possibleSameTypeEdges.Add(checkIndex);
-               possibleSameTypeDiff.AddDat(checkIndex, diff);
-               possibleSameTypeDiffThreshold.AddDat(checkIndex, diffThreshold); 
-               possibleSameTypeSupport.AddDat(checkIndex, n2);
-            }
-         }
-         if (addInBestEdges and possibleSameTypeEdges.Len() > 1) {
-            findNewType = true;
-            edgeType.AddDat(index, type);
-            printf("\n%d -> %d has type %d, %d\n", srcNId(), dstNId(), type(), cascades.Len());
-            for (int i=0; i<possibleSameTypeEdges.Len(); i++) {
-               TIntPr index = possibleSameTypeEdges[i];
-               edgeType.AddDat(index, type);
-               printf("%d -> %d has same type as %d -> %d with n1 %d, n2 %d , %f < %f\n", \
-                      index.Val1(), index.Val2(), srcNId(), dstNId(), \
-                      (int)edgeTimes.GetDat(index), possibleSameTypeSupport.GetDat(index)(), \
-                      possibleSameTypeDiff.GetDat(index)(), possibleSameTypeDiffThreshold.GetDat(index)());
-            }
-            type++;
-            break;
-         }
-      }
-      if (!findNewType) break;
-   }
-
-   for (THash<TIntPr, TInt>::TIter EI = edgeType.BegI(); !EI.IsEnd(); EI++) {
-         TFlt alpha = shapingFunction->expectedAlpha(edgeDiffTime.GetDat(EI.GetKey()));
-         parameter.kAlphas.GetDat(EI.GetDat()).AddDat(EI.GetKey(), alpha);
-   }
-}
-
-void NodeSoftMixCascadesFunction::initPotentialEdges(Data data) {
+void DecayCascadesFunction::initPotentialEdges(Data data) {
   THash<TInt, TCascade>& cascades = data.cascH;
   int cascadesNum = cascades.Len();
   //#pragma omp parallel for
@@ -409,11 +254,11 @@ void NodeSoftMixCascadesFunction::initPotentialEdges(Data data) {
   }
 }
 
-void NodeSoftMixCascadesParameter::reset() {
+void DecayCascadesParameter::reset() {
    kAlphas.Clr();
 }
 
-NodeSoftMixCascadesParameter& NodeSoftMixCascadesParameter::operator = (const NodeSoftMixCascadesParameter& p) {
+DecayCascadesParameter& DecayCascadesParameter::operator = (const DecayCascadesParameter& p) {
 
    kAlphas.Clr();
    kAlphas = p.kAlphas;
@@ -426,7 +271,7 @@ NodeSoftMixCascadesParameter& NodeSoftMixCascadesParameter::operator = (const No
    return *this;
 }
 
-NodeSoftMixCascadesParameter& NodeSoftMixCascadesParameter::operator += (const NodeSoftMixCascadesParameter& p) {
+DecayCascadesParameter& DecayCascadesParameter::operator += (const DecayCascadesParameter& p) {
    for(THash<TInt, THash<TIntPr, TFlt> >::TIter AI = p.kAlphas.BegI(); !AI.IsEnd(); AI++) {
       TInt key = AI.GetKey();
       if (!kAlphas.IsKey(key)) {
@@ -445,7 +290,7 @@ NodeSoftMixCascadesParameter& NodeSoftMixCascadesParameter::operator += (const N
    return *this;
 }
 
-NodeSoftMixCascadesParameter& NodeSoftMixCascadesParameter::operator *= (const TFlt multiplier) {
+DecayCascadesParameter& DecayCascadesParameter::operator *= (const TFlt multiplier) {
    for(THash<TInt, THash<TIntPr,TFlt> >::TIter AI = kAlphas.BegI(); !AI.IsEnd(); AI++) {
       THash<TIntPr, TFlt>& alphas = AI.GetDat();
       for (THash<TIntPr,TFlt>::TIter aI = alphas.BegI(); !aI.IsEnd(); aI++) aI.GetDat() *= multiplier;
@@ -453,55 +298,7 @@ NodeSoftMixCascadesParameter& NodeSoftMixCascadesParameter::operator *= (const T
    return *this;
 }
 
-NodeSoftMixCascadesParameter& NodeSoftMixCascadesParameter::projectedlyUpdateGradient(const NodeSoftMixCascadesParameter& p) {
-   /*THash<TIntPr,TFlt> regularizedTerm = THash<TIntPr,TFlt>();
-   if (Regularizer and latentVariableSize > 1) {
-      for (THash<TInt, THash<TIntPr,TFlt> >::TIter AI = p.kAlphas.BegI(); !AI.IsEnd(); AI++) {
-         for (THash<TIntPr,TFlt>::TIter aI = AI.GetDat().BegI(); !aI.IsEnd(); aI++) {
-            TIntPr alphaIndex = aI.GetKey();
-            if (regularizedTerm.IsKey(alphaIndex)) continue;
-            TFlt maxAlpha = -DBL_MAX;
-            TFlt totalAlpha = 0.0, totalAddTimes = 0.0;
-            TInt maxIndex = -1;
-        
-            for (TInt i=0;i<latentVariableSize;i++) {               
-               THash<TIntPr,TFlt>& alphas = kAlphas.GetDat(i);
-               if (alphas.IsKey(alphaIndex)) {
-                  TFlt alpha = alphas.GetDat(alphaIndex);
-                  if (alpha < MinAlpha) continue;
-                  totalAlpha += alpha;
-                  totalAddTimes += 1.0;
-                  if (alpha > maxAlpha) {
-                     maxAlpha = alpha;
-                     maxIndex = i;
-                  }
-               }
-            }
-
-            if (totalAddTimes==1.0) continue;
-
-            for (TInt i=0;i<latentVariableSize;i++) {
-               THash<TIntPr,TFlt>& alphas = kAlphas.GetDat(i);
-               if (alphas.IsKey(alphaIndex)) {
-                  TFlt& alpha = alphas.GetDat(alphaIndex);
-                  if (alpha < MinAlpha) continue;
-                  if (i==maxIndex) {
-                     TFlt averageAlpha = (totalAlpha - maxAlpha) / (totalAddTimes - 1.0);
-                     TFlt diff = maxAlpha - averageAlpha;
-                     if (diff < Tol) continue;
-                     alpha += Mu * 1.0 / diff;
-                  }
-                  else {
-                     TFlt diff = maxAlpha - alpha;
-                     if (diff < Tol) continue;
-                     alpha -= Mu * 1.0 / diff;
-                  }
-               }
-            }
-            regularizedTerm.AddDat(alphaIndex, 1.0);
-         }
-      }
-   }*/
+DecayCascadesParameter& DecayCascadesParameter::projectedlyUpdateGradient(const DecayCascadesParameter& p) {
    for(THash<TInt, THash<TIntPr,TFlt> >::TIter AI = p.kAlphas.BegI(); !AI.IsEnd(); AI++) {
       TInt key = AI.GetKey();
       THash<TIntPr,TFlt>& alphas = kAlphas.GetDat(key);
@@ -525,14 +322,14 @@ NodeSoftMixCascadesParameter& NodeSoftMixCascadesParameter::projectedlyUpdateGra
    return *this;
 }
 
-TFlt NodeSoftMixCascadesParameter::GetTopicAlpha(TInt srcNId, TInt dstNId, TInt topic) const {
+TFlt DecayCascadesParameter::GetTopicAlpha(TInt srcNId, TInt dstNId, TInt topic) const {
    const THash<TIntPr, TFlt>& alphas = kAlphas.GetDat(topic);
    TIntPr index(srcNId,dstNId);
    if (alphas.IsKey(index)) return alphas.GetDat(index);
    return InitAlpha;
 }
 
-TFlt NodeSoftMixCascadesParameter::GetAlpha(TInt srcNId, TInt dstNId, TInt topic) const {
+TFlt DecayCascadesParameter::GetAlpha(TInt srcNId, TInt dstNId, TInt topic) const {
   const THash<TIntPr,TFlt>& alphas = kAlphas.GetDat(topic);
   TFlt alpha = 0.0;
   TIntPr index(srcNId,dstNId);

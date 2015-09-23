@@ -1,26 +1,26 @@
-#include <Info.h>
+#include <InfoPathModel.h>
 
-void Info::LoadCascadesTxt(const TStr& InFNm) {
+void InfoPathModel::LoadCascadesTxt(const TStr& InFNm) {
    TFIn FIn(InFNm);
    InfoPathFileIO::LoadCascadesTxt(FIn, CascH, nodeInfo);
 }
 
-void Info::LoadGroundTruthTxt(const TStr& InFNm) {
+void InfoPathModel::LoadGroundTruthTxt(const TStr& InFNm) {
    TFIn FIn(InFNm);
    InfoPathFileIO::LoadNetworkTxt(FIn, Network, nodeInfo);
 }
 
-void Info::SaveInferred(const TStr& OutFNm) {
+void InfoPathModel::SaveInferred(const TStr& OutFNm) {
    InfoPathFileIO::SaveNetwork(OutFNm, InferredNetwork, nodeInfo, edgeInfo);
 }
 
-void Info::Init() {
+void InfoPathModel::Init() {
    for (THash<TInt, TNodeInfo>::TIter NI = nodeInfo.NodeNmH.BegI(); NI < nodeInfo.NodeNmH.EndI(); NI++) {
       InferredNetwork.AddNode(NI.GetKey(), NI.GetDat().Name);
    }
 }
 
-void Info::Infer(const TFltV& Steps) {
+void InfoPathModel::Infer(const TFltV& Steps) {
    
    switch (nodeInfo.Model) {
       case POW :

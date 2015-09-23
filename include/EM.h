@@ -45,7 +45,6 @@ class EM {
                bestParameter = LF.parameter;
             } 
          }
-         //LF.parameter = bestParameter;
       }
       bool IsTerminate() const {
          return EMIterNm >= configure.maxIterNm; 
@@ -86,7 +85,6 @@ class EM {
       
          double time = data.time;
          THash<TInt, TCascade> &cascH = data.cascH;
-         //size_t scale = configure.pGDConfigure.maxIterNm / 1;
          size_t sampledIndex = 0;
          TIntFltH sampledCascadesPositionsHash;
       

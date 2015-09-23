@@ -7,7 +7,7 @@
 #include <AdditiveRiskFunction.h>
 #include <TimeShapingFunction.h>
 
-class Info {
+class InfoPathModel {
    public:
       NodeInfo nodeInfo;
       EdgeInfo edgeInfo;
