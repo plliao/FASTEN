@@ -1,3 +1,4 @@
+#test ckchou
 # DecayCascades
 
 **DecayCascades**, a multiple diffusion networks model, is a generative model to deal with diffusion network inference problem.
