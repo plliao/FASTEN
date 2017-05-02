@@ -1,5 +1,5 @@
 #include "stdafx.h"
-#include <DecayCascadesModel.h>
+#include <FASTENModel.h>
 
 int main(int argc, char* argv[]) {
   Env = TEnv(argc, argv, TNotify::StdNotify);
@@ -49,43 +49,43 @@ int main(int argc, char* argv[]) {
   const double MaxAlpha = Env.GetIfArgPrefixFlt("-ua:", 100, "Maximum alpha (default:100)\n");
   const double InitAlpha = Env.GetIfArgPrefixFlt("-ia:", 0.01, "Initial alpha (default:0.01)\n");
 
-  DecayCascadesModel decayCascades;
+  FASTENModel fasten;
   printf("\nLoading input cascades: %s\n", InFNm.CStr());
 
-  decayCascades.SetModel(Model);
-  decayCascades.SetDelta(Delta);
-  decayCascades.SetSampling(TSam);
-  decayCascades.SetMaxIterNm(Iters);
-  decayCascades.SetMaxEMIterNm(EMIters);
-  decayCascades.SetBatchSize(BatchLen);
-  decayCascades.SetLearningRate(lr);
-  decayCascades.SetParamSampling(ParamSampling);
+  fasten.SetModel(Model);
+  fasten.SetDelta(Delta);
+  fasten.SetSampling(TSam);
+  fasten.SetMaxIterNm(Iters);
+  fasten.SetMaxEMIterNm(EMIters);
+  fasten.SetBatchSize(BatchLen);
+  fasten.SetLearningRate(lr);
+  fasten.SetParamSampling(ParamSampling);
 
-  decayCascades.SetLatentVariableSize(latentVariableSize);
-  decayCascades.SetTolerance(Tol);
-  decayCascades.SetMaxAlpha(MaxAlpha);
-  decayCascades.SetMinAlpha(MinAlpha);
-  decayCascades.SetInitAlpha(InitAlpha);
-  decayCascades.SetRegularizer(Regularizer);
-  decayCascades.SetMu(Mu);
-  decayCascades.SetWindow(Window);
-  decayCascades.SetObservedWindow(observedWindow);
-  decayCascades.SetAging(Aging);
-  decayCascades.SetDecayRatio(decayRatio);
+  fasten.SetLatentVariableSize(latentVariableSize);
+  fasten.SetTolerance(Tol);
+  fasten.SetMaxAlpha(MaxAlpha);
+  fasten.SetMinAlpha(MinAlpha);
+  fasten.SetInitAlpha(InitAlpha);
+  fasten.SetRegularizer(Regularizer);
+  fasten.SetMu(Mu);
+  fasten.SetWindow(Window);
+  fasten.SetObservedWindow(observedWindow);
+  fasten.SetAging(Aging);
+  fasten.SetDecayRatio(decayRatio);
 
   // load cascades from file
-  decayCascades.LoadCascadesTxt(InFNm);
+  fasten.LoadCascadesTxt(InFNm);
   
-  printf("cascades:%d\nRunning Stochastic Network Inference..\n", decayCascades.GetCascs());
+  printf("cascades:%d\nRunning Stochastic Network Inference..\n", fasten.GetCascs());
 
   double MaxTime = TFlt::Mn;
   double MinTime = TFlt::Mx;
 
   if (MaxTimeStr.EqI("-1")) {
     // find maximum time across cascades
-    for (int i=0; i<decayCascades.GetCascs(); i++) {
-      if (decayCascades.CascH[i].GetMaxTm() > MaxTime) {
-        MaxTime = decayCascades.CascH[i].GetMaxTm();
+    for (int i=0; i<fasten.GetCascs(); i++) {
+      if (fasten.CascH[i].GetMaxTm() > MaxTime) {
+        MaxTime = fasten.CascH[i].GetMaxTm();
       }
     }
   } else {
@@ -98,9 +98,9 @@ int main(int argc, char* argv[]) {
   if (MinTimeStr.EqI("-1")) {
     // find minimum time across cascades
     MinTime = TFlt::Mx;
-    for (int i=0; i<decayCascades.GetCascs(); i++) {
-      if (decayCascades.CascH[i].GetMinTm() < MinTime && decayCascades.CascH[i].GetMinTm()!=0) {
-        MinTime = decayCascades.CascH[i].GetMinTm();
+    for (int i=0; i<fasten.GetCascs(); i++) {
+      if (fasten.CascH[i].GetMinTm() < MinTime && fasten.CascH[i].GetMinTm()!=0) {
+        MinTime = fasten.CascH[i].GetMinTm();
       }
     }
   } else {
@@ -141,9 +141,9 @@ int main(int argc, char* argv[]) {
       case INFECTION_STEP:
         // copy infections
         if (verbose) { printf("Generating infections vector...\n"); }
-        for (int i=0; i<decayCascades.GetCascs(); i++) {
-          for (int j=0; j<decayCascades.CascH[i].Len() && decayCascades.CascH[i].NIdHitH[j].Tm < MaxTime; j++) {
-            InfectionsV.Add(decayCascades.CascH[i].NIdHitH[j].Tm);
+        for (int i=0; i<fasten.GetCascs(); i++) {
+          for (int j=0; j<fasten.CascH[i].Len() && fasten.CascH[i].NIdHitH[j].Tm < MaxTime; j++) {
+            InfectionsV.Add(fasten.CascH[i].NIdHitH[j].Tm);
           }
         }
 
@@ -163,8 +163,8 @@ int main(int argc, char* argv[]) {
         break;
 
       case CASCADE_STEP:
-        for (int i=0; i<decayCascades.GetCascs(); i++) {
-          if (decayCascades.CascH[i].GetMaxTm()<MinTime+MaxTime) { Steps.Add(decayCascades.CascH[i].GetMaxTm()); }
+        for (int i=0; i<fasten.GetCascs(); i++) {
+          if (fasten.CascH[i].GetMaxTm()<MinTime+MaxTime) { Steps.Add(fasten.CascH[i].GetMaxTm()); }
         }
 
         Steps.Sort();
@@ -186,10 +186,10 @@ int main(int argc, char* argv[]) {
   TFOut FOutTimeSteps(TStr::Fmt("%s-time-steps.txt", OutFNm.CStr()));
   for (int i=0; i<Steps.Len(); i++) { FOutTimeSteps.PutStr(TStr::Fmt("%f\n", Steps[i].Val)); }
 
-  decayCascades.Init();
-  decayCascades.Infer(Steps, OutFNm);
-  decayCascades.SaveInferred(TStr::Fmt("%s.txt", OutFNm.CStr()));
-  decayCascades.SavePriorTopicProbability(TStr::Fmt("%s_PriorTopicProbability.txt", OutFNm.CStr()));
+  fasten.Init();
+  fasten.Infer(Steps, OutFNm);
+  fasten.SaveInferred(TStr::Fmt("%s.txt", OutFNm.CStr()));
+  fasten.SavePriorTopicProbability(TStr::Fmt("%s_PriorTopicProbability.txt", OutFNm.CStr()));
   
   Catch
   printf("\nrun time: %s (%s)\n", ExeTm.GetTmStr(), TSecTm::GetCurTm().GetTmStr().CStr());

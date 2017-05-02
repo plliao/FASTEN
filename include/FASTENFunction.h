@@ -1,5 +1,5 @@
-#ifndef MMRATEPARAMETER_H
-#define MMRATEPARAMETER_H
+#ifndef FASTENPARAMETER_H
+#define FASTENPARAMETER_H
 
 #include <EM.h>
 #include <TimeShapingFunction.h>
@@ -11,18 +11,18 @@ typedef struct {
    TFlt Mu;
    TInt latentVariableSize;   
    TFlt decayRatio;
-}DecayCascadesFunctionConfigure;
+}FASTENFunctionConfigure;
 
-class DecayCascadesFunction;
+class FASTENFunction;
 
-class DecayCascadesParameter {
-   friend class DecayCascadesFunction;
+class FASTENParameter {
+   friend class FASTENFunction;
    public:
-      DecayCascadesParameter& operator = (const DecayCascadesParameter&);
-      DecayCascadesParameter& operator += (const DecayCascadesParameter&);
-      DecayCascadesParameter& operator *= (const TFlt);
-      DecayCascadesParameter& projectedlyUpdateGradient(const DecayCascadesParameter&);
-      void set(DecayCascadesFunctionConfigure configure);
+      FASTENParameter& operator = (const FASTENParameter&);
+      FASTENParameter& operator += (const FASTENParameter&);
+      FASTENParameter& operator *= (const TFlt);
+      FASTENParameter& projectedlyUpdateGradient(const FASTENParameter&);
+      void set(FASTENFunctionConfigure configure);
       void init(Data data, TInt NodeNm = 0);
       void initPriorTopicProbabilityParameter();
       void initAlphaParameter();
@@ -40,12 +40,12 @@ class DecayCascadesParameter {
       TFlt sampledTimes;
 };
 
-class DecayCascadesFunction : public EMLikelihoodFunction<DecayCascadesParameter> {
+class FASTENFunction : public EMLikelihoodFunction<FASTENParameter> {
    public:
       TFlt JointLikelihood(Datum datum, TInt latentVariable) const;
       void maximize() ;
-      DecayCascadesParameter& gradient(Datum datum);
-      void set(DecayCascadesFunctionConfigure configure);
+      FASTENParameter& gradient(Datum datum);
+      void set(FASTENFunctionConfigure configure);
       void init(Data data, TInt NodeNm = 0);
       void initPriorTopicProbabilityParameter() { parameter.initPriorTopicProbabilityParameter();}
       void initAlphaParameter() { parameter.initAlphaParameter();}

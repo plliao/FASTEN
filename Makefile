@@ -12,13 +12,13 @@ HDRDIR = include
 OBJDIR = obj
 SNAPLIBDIRS = $(GLIB) $(SNAP) $(SNAPADV) $(SNAPEXP)
 INCLUDEDIRS = $(HDRDIR) $(SNAPLIBDIRS)
-#LINKOBJS = $(SNAP)/Snap.o $(SNAPADV)/cascdynetinf.o $(SNAPADV)/kronecker.o
-LINKOBJS = $(LIBDIR)/Snap.o $(LIBDIR)/cascdynetinf.o $(LIBDIR)/kronecker.o
+LINKOBJS = $(SNAP)/Snap.o $(SNAPADV)/cascdynetinf.o $(SNAPADV)/kronecker.o
+#LINKOBJS = $(LIBDIR)/Snap.o $(LIBDIR)/cascdynetinf.o $(LIBDIR)/kronecker.o
 
 CC = g++
 INCLUDEFLAGS = $(foreach dir,$(INCLUDEDIRS), -I $(dir))
-#CFLAGS = -g -Wall -ffast-math -fopenmp $(INCLUDEFLAGS)
-CFLAGS = -O3 -Wall -ffast-math -fopenmp $(INCLUDEFLAGS)
+CFLAGS = -g -Wall -ffast-math -fopenmp $(INCLUDEFLAGS)
+#CFLAGS = -O3 -Wall -ffast-math -fopenmp $(INCLUDEFLAGS)
 
 CTAGS = ctags
 CTAGFLAGS = 
@@ -38,9 +38,9 @@ FILES = $(wildcard $(addprefix *, $(SRCEXTS)))
 PROGRAMS = $(addprefix $(BINDIR)/, $(basename $(FILES)))
 PROGRAMSERROR = $(addprefix $(BINDIR)/, $(addsuffix .Err, $(basename $(FILES))))
 
-.PHONY: all ctags clean show 
+.PHONY: all clean show 
 
-all: $(PROGRAMS) ctags
+all: $(PROGRAMS)
 
 .PRECIOUS: $(OBJDIR)/%.o
 $(OBJDIR)/%.o: $(SRCDIR)/%$(SRCEXTS) $(HDRDIR)/%$(HDREXTS)
@@ -53,7 +53,7 @@ ctags: $(SOURCES) $(HEADERS) $(SNAPSOURCES) $(SNAPHEADERS)
 	@$(CTAGS) $(CTAGFLAGS) $(SOURCES) $(HEADERS) $(SNAPSOURCES) $(SNAPHEADERS)
 
 clean: 
-	@$(RM) $(OBJS) $(PROGRAMS) $(PROGRAMSERROR) tags
+	@$(RM) $(OBJS) $(PROGRAMS) $(PROGRAMSERROR)
 
 show:
 	@echo 'FILES           :' $(FILES)

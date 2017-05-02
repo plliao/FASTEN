@@ -1,5 +1,5 @@
 #include "stdafx.h"
-#include <DecayCascadesModel.h>
+#include <FASTENModel.h>
 #include <InfoPathFileIO.h>
 
 int main(int argc, char* argv[]) {
@@ -41,36 +41,36 @@ int main(int argc, char* argv[]) {
   // output filename
   const TStr FileName = Env.GetIfArgPrefixStr("-f:", TStr("example"), "Output name for network & cascades (default:example)\n");
 
-  DecayCascadesModel decayCascades;
+  FASTENModel fasten;
 
-  decayCascades.SetTotalTime(TotalTime);
-  decayCascades.SetWindow(Window);
-  decayCascades.SetModel(Model);
-  decayCascades.SetDelta(Delta);
-  decayCascades.SetK(k);
-  decayCascades.SetDecayRatio(decayRatio);
+  fasten.SetTotalTime(TotalTime);
+  fasten.SetWindow(Window);
+  fasten.SetModel(Model);
+  fasten.SetDelta(Delta);
+  fasten.SetK(k);
+  fasten.SetDecayRatio(decayRatio);
 	
   TStrV RAlphasV; RAlphas.SplitOnAllCh(';', RAlphasV);
   TFlt MaxAlpha = RAlphasV[1].GetFlt(); 
   TFlt MinAlpha = RAlphasV[0].GetFlt();
 
-  decayCascades.SetLatentVariableSize(latentVariableSize);
-  decayCascades.SetMaxAlpha(MaxAlpha);
-  decayCascades.SetMinAlpha(MinAlpha);
+  fasten.SetLatentVariableSize(latentVariableSize);
+  fasten.SetMaxAlpha(MaxAlpha);
+  fasten.SetMinAlpha(MinAlpha);
 
   // Generate network
   if (TNetwork<2) {
-	  decayCascades.GenerateGroundTruth(TNetwork, NNodes, NEdges, NetworkParams); // Generate network
+	  fasten.GenerateGroundTruth(TNetwork, NNodes, NEdges, NetworkParams); // Generate network
   } else {
 	  TFIn GFIn(GroundTruthFileName);     // open network file
-          InfoPathFileIO::LoadNetworkTxt(GFIn, decayCascades.Network, decayCascades.nodeInfo);
+          InfoPathFileIO::LoadNetworkTxt(GFIn, fasten.Network, fasten.nodeInfo);
   }
 
   // Generate Cascades
   for (int i = 0; i < NCascades; i++) {
-	  TCascade C(decayCascades.CascH.Len(), decayCascades.nodeInfo.Model);
-	  decayCascades.GenCascade(C);
-          decayCascades.CascH.AddDat(C.CId) = C;
+	  TCascade C(fasten.CascH.Len(), fasten.nodeInfo.Model);
+	  fasten.GenCascade(C);
+          fasten.CascH.AddDat(C.CId) = C;
 
 	  printf("cascade:%d (%d nodes, first infection:%f, last infection:%f)\n", i, C.Len(), C.GetMinTm(), C.GetMaxTm());
 
@@ -78,13 +78,13 @@ int main(int argc, char* argv[]) {
 	  IAssert( (C.GetMaxTm() - C.GetMinTm()) <= Window );
   }
 
-  printf("Generate %d cascades!\n", decayCascades.GetCascs());
+  printf("Generate %d cascades!\n", fasten.GetCascs());
 
-  if (TNetwork<2) decayCascades.SaveGroundTruth(FileName);
-  InfoPathFileIO::SaveNetwork(TStr::Fmt("%s-network.txt", FileName.CStr()), decayCascades.Network, decayCascades.nodeInfo, decayCascades.edgeInfo);
+  if (TNetwork<2) fasten.SaveGroundTruth(FileName);
+  InfoPathFileIO::SaveNetwork(TStr::Fmt("%s-network.txt", FileName.CStr()), fasten.Network, fasten.nodeInfo, fasten.edgeInfo);
   // Save Cascades
-  InfoPathFileIO::SaveCascades(TStr::Fmt("%s-cascades.txt", FileName.CStr()), decayCascades.CascH, decayCascades.nodeInfo);
-  decayCascades.SavePriorTopicProbability(TStr::Fmt("%s_PriorTopicProbability.txt",FileName.CStr()));
+  InfoPathFileIO::SaveCascades(TStr::Fmt("%s-cascades.txt", FileName.CStr()), fasten.CascH, fasten.nodeInfo);
+  fasten.SavePriorTopicProbability(TStr::Fmt("%s_PriorTopicProbability.txt",FileName.CStr()));
 
   Catch
   printf("\nrun time: %s (%s)\n", ExeTm.GetTmStr(), TSecTm::GetCurTm().GetTmStr().CStr());

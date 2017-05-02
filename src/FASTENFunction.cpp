@@ -1,6 +1,6 @@
-#include <DecayCascadesFunction.h>
+#include <FASTENFunction.h>
 
-TFlt DecayCascadesFunction::JointLikelihood(Datum datum, TInt latentVariable) const {
+TFlt FASTENFunction::JointLikelihood(Datum datum, TInt latentVariable) const {
    double CurrentTime = datum.time;
    TCascade &Cascade = datum.cascH.GetDat(datum.index);
    THash<TInt, TNodeInfo> &NodeNmH = datum.NodeNmH;
@@ -45,7 +45,7 @@ TFlt DecayCascadesFunction::JointLikelihood(Datum datum, TInt latentVariable) co
    return logPi - totalLoss;
 }
 
-DecayCascadesParameter& DecayCascadesFunction::gradient(Datum datum) {
+FASTENParameter& FASTENFunction::gradient(Datum datum) {
    double CurrentTime = datum.time;
    TCascade &Cascade = datum.cascH.GetDat(datum.index);
    THash<TInt, TNodeInfo> &NodeNmH = datum.NodeNmH;
@@ -135,7 +135,7 @@ DecayCascadesParameter& DecayCascadesFunction::gradient(Datum datum) {
    return parameterGrad;
 }
 
-void DecayCascadesFunction::maximize() {
+void FASTENFunction::maximize() {
    if (parameterGrad.sampledTimes == 0.0) return;
    for (THash<TInt,TFlt>::TIter VI = parameterGrad.priorTopicProbability.BegI(); !VI.IsEnd(); VI++) {
       //printf("topic %d, value %f, ", VI.GetKey()(), VI.GetDat()());
@@ -146,7 +146,7 @@ void DecayCascadesFunction::maximize() {
    parameterGrad.sampledTimes = 0.0;
 }
 
-void DecayCascadesFunction::set(DecayCascadesFunctionConfigure configure) {
+void FASTENFunction::set(FASTENFunctionConfigure configure) {
    latentVariableSize = configure.latentVariableSize;
    shapingFunction = configure.shapingFunction;
    decayRatio = configure.decayRatio;
@@ -154,11 +154,11 @@ void DecayCascadesFunction::set(DecayCascadesFunctionConfigure configure) {
    parameterGrad.set(configure);
 }
 
-void DecayCascadesFunction::init(Data data, TInt NodeNm) {
+void FASTENFunction::init(Data data, TInt NodeNm) {
    parameter.init(data, NodeNm);
 }
 
-void DecayCascadesParameter::set(DecayCascadesFunctionConfigure configure) {
+void FASTENParameter::set(FASTENFunctionConfigure configure) {
    Regularizer = configure.Regularizer;
    Mu = configure.Mu;
    Tol = configure.Tol;
@@ -168,13 +168,13 @@ void DecayCascadesParameter::set(DecayCascadesFunctionConfigure configure) {
    latentVariableSize = configure.latentVariableSize;
 }
 
-void DecayCascadesParameter::init(Data data, TInt NodeNm) {
+void FASTENParameter::init(Data data, TInt NodeNm) {
    for (TInt i=0; i < latentVariableSize; i++) {
       kAlphas.AddDat(i, THash<TIntPr, TFlt>());
    }
 }
 
-void DecayCascadesParameter::initPriorTopicProbabilityParameter() {
+void FASTENParameter::initPriorTopicProbabilityParameter() {
    TFlt::Rnd.PutSeed(0);
    TFlt sum = 0.0;
    for (TInt i=0; i < latentVariableSize; i++) {
@@ -184,7 +184,7 @@ void DecayCascadesParameter::initPriorTopicProbabilityParameter() {
    for (TInt i=0; i < latentVariableSize; i++) priorTopicProbability.GetDat(i) = priorTopicProbability.GetDat(i) / sum;
 }
 
-void DecayCascadesParameter::initAlphaParameter() {
+void FASTENParameter::initAlphaParameter() {
    for (TInt i=0; i < latentVariableSize; i++) {
       THash<TIntPr, TFlt>& alphas = kAlphas.GetDat(i);
       for (THash<TIntPr, TFlt>::TIter AI = alphas.BegI(); !AI.IsEnd(); AI++) {
@@ -193,7 +193,7 @@ void DecayCascadesParameter::initAlphaParameter() {
    }
 }
 
-void DecayCascadesFunction::initPotentialEdges(Data data) {
+void FASTENFunction::initPotentialEdges(Data data) {
   THash<TInt, TCascade>& cascades = data.cascH;
   int cascadesNum = cascades.Len();
   //#pragma omp parallel for
@@ -210,11 +210,11 @@ void DecayCascadesFunction::initPotentialEdges(Data data) {
   }
 }
 
-void DecayCascadesParameter::reset() {
+void FASTENParameter::reset() {
    kAlphas.Clr();
 }
 
-DecayCascadesParameter& DecayCascadesParameter::operator = (const DecayCascadesParameter& p) {
+FASTENParameter& FASTENParameter::operator = (const FASTENParameter& p) {
 
    kAlphas.Clr();
    kAlphas = p.kAlphas;
@@ -226,7 +226,7 @@ DecayCascadesParameter& DecayCascadesParameter::operator = (const DecayCascadesP
    return *this;
 }
 
-DecayCascadesParameter& DecayCascadesParameter::operator += (const DecayCascadesParameter& p) {
+FASTENParameter& FASTENParameter::operator += (const FASTENParameter& p) {
    for(THash<TInt, THash<TIntPr, TFlt> >::TIter AI = p.kAlphas.BegI(); !AI.IsEnd(); AI++) {
       TInt key = AI.GetKey();
       if (!kAlphas.IsKey(key)) {
@@ -245,7 +245,7 @@ DecayCascadesParameter& DecayCascadesParameter::operator += (const DecayCascades
    return *this;
 }
 
-DecayCascadesParameter& DecayCascadesParameter::operator *= (const TFlt multiplier) {
+FASTENParameter& FASTENParameter::operator *= (const TFlt multiplier) {
    for(THash<TInt, THash<TIntPr,TFlt> >::TIter AI = kAlphas.BegI(); !AI.IsEnd(); AI++) {
       THash<TIntPr, TFlt>& alphas = AI.GetDat();
       for (THash<TIntPr,TFlt>::TIter aI = alphas.BegI(); !aI.IsEnd(); aI++) aI.GetDat() *= multiplier;
@@ -253,7 +253,7 @@ DecayCascadesParameter& DecayCascadesParameter::operator *= (const TFlt multipli
    return *this;
 }
 
-DecayCascadesParameter& DecayCascadesParameter::projectedlyUpdateGradient(const DecayCascadesParameter& p) {
+FASTENParameter& FASTENParameter::projectedlyUpdateGradient(const FASTENParameter& p) {
    for(THash<TInt, THash<TIntPr,TFlt> >::TIter AI = p.kAlphas.BegI(); !AI.IsEnd(); AI++) {
       TInt key = AI.GetKey();
       THash<TIntPr,TFlt>& alphas = kAlphas.GetDat(key);
@@ -276,14 +276,14 @@ DecayCascadesParameter& DecayCascadesParameter::projectedlyUpdateGradient(const 
    return *this;
 }
 
-TFlt DecayCascadesParameter::GetTopicAlpha(TInt srcNId, TInt dstNId, TInt topic) const {
+TFlt FASTENParameter::GetTopicAlpha(TInt srcNId, TInt dstNId, TInt topic) const {
    const THash<TIntPr, TFlt>& alphas = kAlphas.GetDat(topic);
    TIntPr index(srcNId,dstNId);
    if (alphas.IsKey(index)) return alphas.GetDat(index);
    return InitAlpha;
 }
 
-TFlt DecayCascadesParameter::GetAlpha(TInt srcNId, TInt dstNId, TInt topic) const {
+TFlt FASTENParameter::GetAlpha(TInt srcNId, TInt dstNId, TInt topic) const {
   const THash<TIntPr,TFlt>& alphas = kAlphas.GetDat(topic);
   TFlt alpha = 0.0;
   TIntPr index(srcNId,dstNId);

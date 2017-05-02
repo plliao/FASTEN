@@ -1,13 +1,13 @@
-#ifndef MMRATEMODEL_H
-#define MMRATEMODEL_H
+#ifndef FASTENMODEL_H
+#define FASTENMODEL_H
 
 #include <cascdynetinf.h>
 #include <InfoPathFileIO.h>
 #include <EM.h>
-#include <DecayCascadesFunction.h>
+#include <FASTENFunction.h>
 #include <TimeShapingFunction.h>
 
-class DecayCascadesModel {
+class FASTENModel {
    public:
       NodeInfo nodeInfo;
       EdgeInfo edgeInfo;
@@ -20,11 +20,11 @@ class DecayCascadesModel {
       TFlt Delta, K;
       TFlt Gamma, Aging;
 
-      DecayCascadesFunctionConfigure decayCascadesFunctionConfigure;
-      DecayCascadesFunction lossFunction;
+      FASTENFunctionConfigure fastenFunctionConfigure;
+      FASTENFunction lossFunction;
 
       EMConfigure eMConfigure;
-      EM<DecayCascadesParameter> em;
+      EM<FASTENParameter> em;
 
       void LoadCascadesTxt(const TStr& InFNm);
       void LoadGroundTruthTxt(const TStr& InFNm);
@@ -37,7 +37,7 @@ class DecayCascadesModel {
       void GenerateGroundTruth(const int& TNetwork, const int& NNodes, const int& NEdges, const TStr& NetworkParams);
       void SaveGroundTruth(TStr);
 
-      void SetLatentVariableSize(const TInt size) { decayCascadesFunctionConfigure.latentVariableSize = eMConfigure.latentVariableSize = size;}
+      void SetLatentVariableSize(const TInt size) { fastenFunctionConfigure.latentVariableSize = eMConfigure.latentVariableSize = size;}
       void SetTotalTime(const float& tt) { TotalTime = tt; }
       void SetModel(const TModel& model) { nodeInfo.Model = model; }
       void SetWindow(const double& window) { Window = window; }
@@ -53,13 +53,13 @@ class DecayCascadesModel {
       void SetMaxEMIterNm(const size_t maxIterNm) { eMConfigure.maxIterNm = maxIterNm;}
 
       void SetAging(const double& aging) { Aging = aging; }
-      void SetRegularizer(const TRegularizer& reg) { decayCascadesFunctionConfigure.Regularizer = reg; }
-      void SetMu(const double& mu) { decayCascadesFunctionConfigure.Mu = mu; }
-      void SetDecayRatio(const double& df) { decayCascadesFunctionConfigure.decayRatio = df; }
-      void SetTolerance(const double& tol) { decayCascadesFunctionConfigure.Tol = tol; }
-      void SetMaxAlpha(const double& ma) { decayCascadesFunctionConfigure.MaxAlpha = edgeInfo.MaxAlpha = ma; }
-      void SetMinAlpha(const double& ma) { decayCascadesFunctionConfigure.MinAlpha = edgeInfo.MinAlpha = ma; }
-      void SetInitAlpha(const double& ia) { decayCascadesFunctionConfigure.InitAlpha = ia; }
+      void SetRegularizer(const TRegularizer& reg) { fastenFunctionConfigure.Regularizer = reg; }
+      void SetMu(const double& mu) { fastenFunctionConfigure.Mu = mu; }
+      void SetDecayRatio(const double& df) { fastenFunctionConfigure.decayRatio = df; }
+      void SetTolerance(const double& tol) { fastenFunctionConfigure.Tol = tol; }
+      void SetMaxAlpha(const double& ma) { fastenFunctionConfigure.MaxAlpha = edgeInfo.MaxAlpha = ma; }
+      void SetMinAlpha(const double& ma) { fastenFunctionConfigure.MinAlpha = edgeInfo.MinAlpha = ma; }
+      void SetInitAlpha(const double& ia) { fastenFunctionConfigure.InitAlpha = ia; }
 
       void Init();
       int GetCascs() { return CascH.Len(); }

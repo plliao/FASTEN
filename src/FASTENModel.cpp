@@ -1,23 +1,23 @@
-#include <DecayCascadesModel.h>
+#include <FASTENModel.h>
 #include <kronecker.h>
 #include <InfoPathFileIO.h>
 #include <cmath>
 
-void DecayCascadesModel::LoadCascadesTxt(const TStr& InFNm) {
+void FASTENModel::LoadCascadesTxt(const TStr& InFNm) {
    TFIn FIn(InFNm);
    InfoPathFileIO::LoadCascadesTxt(FIn, CascH, nodeInfo);
 }
 
-void DecayCascadesModel::LoadGroundTruthTxt(const TStr& InFNm) {
+void FASTENModel::LoadGroundTruthTxt(const TStr& InFNm) {
    TFIn FIn(InFNm);
    InfoPathFileIO::LoadNetworkTxt(FIn, Network, nodeInfo);
 }
 
-void DecayCascadesModel::SaveInferred(const TStr& OutFNm) {
+void FASTENModel::SaveInferred(const TStr& OutFNm) {
    InfoPathFileIO::SaveNetwork(OutFNm, InferredNetwork, nodeInfo, edgeInfo);
 }
 
-void DecayCascadesModel::SavePriorTopicProbability(const TStr& OutFNm) {
+void FASTENModel::SavePriorTopicProbability(const TStr& OutFNm) {
    TFOut FOut(OutFNm);
    THash<TInt, TFlt>& priorTopicProbability = lossFunction.parameter.priorTopicProbability;
    TInt size = priorTopicProbability.Len();
@@ -27,7 +27,7 @@ void DecayCascadesModel::SavePriorTopicProbability(const TStr& OutFNm) {
    }
 }
 
-void DecayCascadesModel::ReadAlphas(const TStr& InFNm) {
+void FASTENModel::ReadAlphas(const TStr& InFNm) {
   for ( THash<TInt, THash<TIntPr,TFlt> >::TIter AI = lossFunction.parameter.kAlphas.BegI(); !AI.IsEnd(); AI++) {
      TInt key = AI.GetKey() + 1;
      TStr FNm = InFNm + "-" + key.GetStr() + "-network.txt";
@@ -45,10 +45,10 @@ void DecayCascadesModel::ReadAlphas(const TStr& InFNm) {
   }
 }
 
-void DecayCascadesModel::ReadPriorTopicProbability(const TStr& InFNm) {
+void FASTENModel::ReadPriorTopicProbability(const TStr& InFNm) {
   TFIn FIn(InFNm);
   TStr line; 
-  DecayCascadesParameter& parameter = lossFunction.parameter;
+  FASTENParameter& parameter = lossFunction.parameter;
   while (!FIn.Eof()) {
      FIn.GetNextLn(line);
      TStrV tokens;
@@ -61,7 +61,7 @@ void DecayCascadesModel::ReadPriorTopicProbability(const TStr& InFNm) {
   }
 }
 
-void DecayCascadesModel::GenCascade(TCascade& C) {
+void FASTENModel::GenCascade(TCascade& C) {
 	bool verbose = false;
 	TIntFltH InfectedNIdH; TIntH InfectedBy;
 	double GlobalTime, InitTime;
@@ -127,7 +127,7 @@ void DecayCascadesModel::GenCascade(TCascade& C) {
 				else alpha = (double)lossFunction.GetAlpha(NId, DstNId, topic);
 				if (verbose) { printf("GlobalTime:%f, nodes:%d->%d, alpha:%f\n", GlobalTime, NId, DstNId, alpha); }
 
-                                alpha /= TMath::Power(decayCascadesFunctionConfigure.decayRatio, nodePosition);
+                                alpha /= TMath::Power(fastenFunctionConfigure.decayRatio, nodePosition);
 				if (alpha <= edgeInfo.MinAlpha) { continue; }
 
 				// not infecting the parent
@@ -186,10 +186,10 @@ void DecayCascadesModel::GenCascade(TCascade& C) {
 
 }
 
-void DecayCascadesModel::GenerateGroundTruth(const int& TNetwork, const int& NNodes, const int& NEdges, const TStr& NetworkParams) {
+void FASTENModel::GenerateGroundTruth(const int& TNetwork, const int& NNodes, const int& NEdges, const TStr& NetworkParams) {
    TIntFltH positionHash;
    Data data = {nodeInfo.NodeNmH, CascH, positionHash, 0};
-   lossFunction.set(decayCascadesFunctionConfigure);
+   lossFunction.set(fastenFunctionConfigure);
    lossFunction.init(data, NNodes);
 
    for (TInt i=0; i < eMConfigure.latentVariableSize; i++) {
@@ -264,10 +264,10 @@ void DecayCascadesModel::GenerateGroundTruth(const int& TNetwork, const int& NNo
    }
 }
 
-void DecayCascadesModel::SaveGroundTruth(TStr fileNm) {
+void FASTENModel::SaveGroundTruth(TStr fileNm) {
    printf("ground truth\n");
 
-   for (TInt latentVariable=0; latentVariable < decayCascadesFunctionConfigure.latentVariableSize; latentVariable++) {
+   for (TInt latentVariable=0; latentVariable < fastenFunctionConfigure.latentVariableSize; latentVariable++) {
       TFOut FOut(fileNm + TStr::Fmt("-%d-network.txt", latentVariable+1));
       for (THash<TInt, TNodeInfo>::TIter NI = nodeInfo.NodeNmH.BegI(); NI < nodeInfo.NodeNmH.EndI(); NI++) {
          FOut.PutStr(TStr::Fmt("%d,%s\n", NI.GetKey().Val, NI.GetDat().Name.CStr()));
@@ -281,7 +281,7 @@ void DecayCascadesModel::SaveGroundTruth(TStr fileNm) {
 
       TFlt maxValue = -DBL_MAX;
       printf("%d,%d , \n", srcNId(), dstNId());
-      for (TInt latentVariable=0; latentVariable < decayCascadesFunctionConfigure.latentVariableSize; latentVariable++) {
+      for (TInt latentVariable=0; latentVariable < fastenFunctionConfigure.latentVariableSize; latentVariable++) {
          THash<TIntPr, TFlt>& alphas = lossFunction.parameter.kAlphas.GetDat(latentVariable); 
 
          TFlt alpha = 0.0;
@@ -299,26 +299,26 @@ void DecayCascadesModel::SaveGroundTruth(TStr fileNm) {
    }
 }
 
-void DecayCascadesModel::Init() {
+void FASTENModel::Init() {
    for (THash<TInt, TNodeInfo>::TIter NI = nodeInfo.NodeNmH.BegI(); NI < nodeInfo.NodeNmH.EndI(); NI++) {
       InferredNetwork.AddNode(NI.GetKey(), NI.GetDat().Name);
       MaxNetwork.AddNode(NI.GetKey(), NI.GetDat().Name);
    }
 }
 
-void DecayCascadesModel::Infer(const TFltV& Steps, const TStr& OutFNm) {
+void FASTENModel::Infer(const TFltV& Steps, const TStr& OutFNm) {
   
    switch (nodeInfo.Model) {
       case POW :
-         decayCascadesFunctionConfigure.shapingFunction = new POWShapingFunction(Delta);
+         fastenFunctionConfigure.shapingFunction = new POWShapingFunction(Delta);
          break;
       case RAY :
-         decayCascadesFunctionConfigure.shapingFunction = new RAYShapingFunction();
+         fastenFunctionConfigure.shapingFunction = new RAYShapingFunction();
          break;
       default :
-         decayCascadesFunctionConfigure.shapingFunction = new EXPShapingFunction(); 
+         fastenFunctionConfigure.shapingFunction = new EXPShapingFunction(); 
    } 
-   lossFunction.set(decayCascadesFunctionConfigure);
+   lossFunction.set(fastenFunctionConfigure);
    em.set(eMConfigure);
    TIntFltH CascadesPositions;
    Data data = {nodeInfo.NodeNmH, CascH, CascadesPositions, 0.0};
@@ -374,7 +374,7 @@ void DecayCascadesModel::Infer(const TFltV& Steps, const TStr& OutFNm) {
                 alpha == inferredNetwork.GetEDat(srcNId, dstNId).GetDat(Steps[t-1]))
                alpha = alpha * Aging;
             
-            if (alpha <= decayCascadesFunctionConfigure.MinAlpha) continue;
+            if (alpha <= fastenFunctionConfigure.MinAlpha) continue;
             if (!inferredNetwork.IsEdge(srcNId, dstNId)) inferredNetwork.AddEdge(srcNId, dstNId, TFltFltH());
             if (!MaxNetwork.IsEdge(srcNId, dstNId)) MaxNetwork.AddEdge(srcNId, dstNId, TFltFltH());
  
@@ -389,5 +389,5 @@ void DecayCascadesModel::Infer(const TFltV& Steps, const TStr& OutFNm) {
       }   
    }
    InfoPathFileIO::SaveNetwork(OutFNm + "_Max.txt", MaxNetwork, nodeInfo, edgeInfo);
-   delete decayCascadesFunctionConfigure.shapingFunction;
+   delete fastenFunctionConfigure.shapingFunction;
 }
