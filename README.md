@@ -1,14 +1,22 @@
-# DecayCascades
+# FASTEN
 
-**DecayCascades**, a multiple diffusion networks model, is a generative model to deal with diffusion network inference problem.
+**FASTEN** is a generative model to deal with diffusion network inference problem.
 
-We also provide several state of the arts of diffusion network model listed below.
+Our model infers multiple diffusion networks using the first-hand sharing pattern.
+
+We also provide several diffusion network models listed below.
 
 * InfoPath
 * MMRate
 * MixCascades
 
 Please refer to my paper for more details.
+
+```
+Uncovering Multiple Diffusion Networks Using the First-Hand Sharing Pattern
+Pei-Lun Liao, Chung-Kuang Chou, and Ming-Syan Chen
+Proceedings of the 2016 SIAM International Conference on Data Mining. 2016, 63-71 
+```
 
 ## Dependency
 * Openmp
@@ -17,40 +25,40 @@ Please refer to my paper for more details.
 
 Note:  
 You should compile the SNAP core, cascdynetinf and kronecker before doing installation.  
-  * SNAP core is in *\<SNAP Library Path\>/snap-core* directory.  
-  * cascdynetinf and kronecker are in *\<SNAP Library Path\>/snap-adv* directory.  
+  * SNAP core is in `\<SNAP Library Path\>/snap-core` directory.  
+  * cascdynetinf and kronecker are in `\<SNAP Library Path\>/snap-adv` directory.  
 
-After compilation put the compiled objective files i.e. Snap.o, cascdynetinf.o and kronecker.o into *lib* directory. 
+After compilation put the compiled objective files i.e. `Snap.o`, `cascdynetinf.o` and `kronecker.o` into `lib` directory.
 
 ## Installation
 
 Get codes from Github.
 
-`git clone https://github.com/plliao/DecayCascades.git`
+`git clone https://github.com/plliao/FASTEN.git`
 
-`cd DecayCascades`
+`cd FASTEN`
 
 Set the SNAP library path in Makefile
 
 `vim Makefile`
 
-Find "SnapDirPath = ../Snap-2.3" in *Makefile* and set your SNAP Library path.
+Find `SnapDirPath = ../Snap-2.3` in Makefile and set your SNAP Library path.
 
 Create the required directories.
 
 `mkdir obj bin`
 
-Compile codes using *make* command.
+Compile codes using `make` command.
 
 `make -j 4`
 
-The compiled programs are in the *bin* directory.
+The compiled programs are in the `bin` directory.
 
 ## Usage
 
 Please check all model parameters listed in the corresponging cpp file. 
 
-We provide an example in *exp.sh* script for you to refer.
+We provide an example in `exp.sh` script for you to refer.
 
 Note that you should create the required directories before you run the script i.e. `mkdir plot result data`.
 
@@ -59,19 +67,19 @@ Note that you should create the required directories before you run the script i
 * InfoPath.cpp: main file of InfoPath model  
 * MMRate.cpp: main file of MMRate model  
 * MixCascades.cpp: main file of MixCascades model  
-* DecayCascades.cpp: main file of DecayCascades model
+* FASTEN.cpp: main file of FASTEN model
 
 #### Evaluations
-* EvaluationAUC.cpp: PRC AUC evaluation main file  
-* EvaluationMSE.cpp: MSE evaluation main file  
-* EvaluationMultiple.cpp: multiple network evaluation main file  
+* EvaluationAUC.cpp: PRC AUC evaluation file  
+* EvaluationMSE.cpp: MSE evaluation file  
+* EvaluationMultiple.cpp: multiple network evaluation file  
 
 #### Utility
-* generate_DCnets.cpp: cascades and network generator using our diffusion model  
+* generate_FASTEN_nets.cpp: cascades and network generator using our diffusion model  
 * DataMerger.cpp: a program to merge several cascades and network files into single file.
 
 ## Reference
-1. *InfoPath*, Structure and Dynamics of Information Pathways in On-line Media, in WSDM 2013
-2. *MMRate*, MMRate: inferring multi-aspect diffusion networks with multi-pattern cascades, in KDD 2014
-3. *MixCascades*, Cluster cascades: Infer multiple underlying networks using diffusion data, in ASONAM 2014
-4. *DecayCascades*, Uncovering Multiple Diffusion Networks Using the First-Hand Sharing Pattern
+1. *InfoPath*, Structure and Dynamics of Information Pathways in On-line Media, at WSDM 2013
+2. *MMRate*, MMRate: inferring multi-aspect diffusion networks with multi-pattern cascades, at KDD 2014
+3. *MixCascades*, Cluster cascades: Infer multiple underlying networks using diffusion data, at ASONAM 2014
+4. *FASTEN*, Uncovering Multiple Diffusion Networks Using the First-Hand Sharing Pattern, at SDM 2016
