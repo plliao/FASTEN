@@ -1,6 +1,6 @@
 # FASTEN
 
-**FASTEN** is a generative model to deal with diffusion network inference problem.
+**FASTEN** is a generative model to solve diffusion network inference problem.
 
 Our model infers multiple diffusion networks using the first-hand sharing pattern.
 
@@ -20,13 +20,29 @@ Proceedings of the 2016 SIAM International Conference on Data Mining. 2016, 63-7
 
 ## Dependency
 * Openmp
-* SNAP 2.3 Library @ http://snap.stanford.edu/snap/download.html
+* SNAP 2.3 Library @ http://snap.stanford.edu/snap/releases.html
 * Gnuplot
 
 Note:  
-You should compile the SNAP core, cascdynetinf and kronecker before doing installation.  
-  * SNAP core is in `\<SNAP Library Path\>/snap-core` directory.  
-  * cascdynetinf and kronecker are in `\<SNAP Library Path\>/snap-adv` directory.  
+You should compile the `SNAP core`, `cascdynetinf.cpp` and `kronecker.cpp` before doing installation.  
+
+  * `SNAP core` is in `<Your SNAP Library Path>/snap-core` directory.
+  
+    To compile `SNAP core`.
+      ```
+      cd <Your SNAP Library Path>/snap-core
+      make
+      ```
+      
+  * `cascdynetinf.cpp` and `kronecker.cpp` are in `<Your SNAP Library Path>/snap-adv` directory.  
+  
+    To compile `cascdynetinf.cpp` and `kronecker.cpp`
+    
+    ```
+    cd <Your SNAP Library Path>/snap-adv
+    g++ -c cascdynetinf.cpp -o cascdynetinf.o -I ../snap-core -I ../glib-core ../snap-core/Snap.o
+    g++ -c kronecker.cpp -o kronecker.o -I ../snap-core -I ../glib-core ../snap-core/Snap.o
+    ```
 
 After compilation put the compiled objective files i.e. `Snap.o`, `cascdynetinf.o` and `kronecker.o` into `lib` directory.
 
@@ -59,6 +75,10 @@ The compiled programs are in the `bin` directory.
 Please check all model parameters listed in the corresponging cpp file. 
 
 We provide an example in `exp.sh` script for you to refer.
+
+To run the script
+
+`./exp.sh`
 
 Note that you should create the required directories before you run the script i.e. `mkdir plot result data`.
 
